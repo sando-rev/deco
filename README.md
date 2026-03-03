@@ -29,7 +29,7 @@ Landing page: [landing-weld-chi-78.vercel.app](https://landing-weld-chi-78.verce
 
 - **Frontend**: React Native (Expo SDK 55) with Expo Router
 - **Backend**: Supabase (PostgreSQL, Auth, Edge Functions, Row Level Security)
-- **AI**: OpenAI GPT-4o-mini via Supabase Edge Function for goal analysis
+- **AI**: Anthropic Claude Haiku via Supabase Edge Function for goal analysis
 - **State Management**: TanStack React Query
 - **Landing Page**: Next.js on Vercel
 
@@ -72,4 +72,4 @@ eas build --platform android --profile preview --local
 ### Environment
 The app connects to a Supabase project. The Supabase URL and anon key are configured in `src/services/supabase.ts`.
 
-The `goal-feedback` edge function requires an `OPENAI_API_KEY` secret set in Supabase.
+The `goal-feedback` edge function requires an `ANTHROPIC_API_KEY` secret set in Supabase.

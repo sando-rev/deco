@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
 interface RequestBody {
   description: string;
@@ -65,13 +65,13 @@ Provide constructive, encouraging feedback (2-3 sentences) and up to 2 specific 
 
 Also detect which of the athlete's selected skills this goal relates to (return their exact names from the list provided).
 
-IMPORTANT: Always respond in valid JSON format.`;
+IMPORTANT: Always respond with ONLY valid JSON, no other text.`;
 
     const userPrompt = `Athlete's selected skills: ${skillsList}
 
 Goal: "${description}"
 
-Analyze this goal and respond in this exact JSON format:
+Analyze this goal and respond with ONLY this JSON (no markdown, no explanation):
 {
   "specificity_score": <number 1-10>,
   "measurability_score": <number 1-10>,
@@ -81,35 +81,34 @@ Analyze this goal and respond in this exact JSON format:
   "detected_skills": ["<skill name 1>", "<skill name 2>"]
 }`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY!,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 500,
+        system: systemPrompt,
         messages: [
-          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.7,
-        max_tokens: 500,
-        response_format: { type: "json_object" },
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("OpenAI API error:", errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error("Anthropic API error:", errorText);
+      throw new Error(`Anthropic API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const content = data.choices[0]?.message?.content;
+    const content = data.content?.[0]?.text;
 
     if (!content) {
-      throw new Error("No content in OpenAI response");
+      throw new Error("No content in Anthropic response");
     }
 
     const analysis: GoalAnalysis = JSON.parse(content);
