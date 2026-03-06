@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, supabaseAuth } from '../services/supabase';
 import { Profile, Role } from '../types/database';
+import i18n from '../i18n';
 
 interface AuthContextType {
   session: Session | null;
@@ -37,6 +38,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data && !error) {
         console.log('[Auth] Profile loaded:', data.full_name, data.role);
         setProfile(data as Profile);
+        // Sync language preference
+        if ((data as any).language && i18n.language !== (data as any).language) {
+          i18n.changeLanguage((data as any).language);
+        }
+        // Update last_active_at silently
+        supabase
+          .from('profiles')
+          .update({ last_active_at: new Date().toISOString() })
+          .eq('id', userId)
+          .then(() => {});
       }
       return (data as Profile) ?? null;
     } catch (e) {

@@ -1,8 +1,11 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '../../src/constants/theme';
 
 export default function AthleteLayout() {
+  const { t } = useTranslation();
+
   return (
     <Tabs
       screenOptions={{
@@ -32,7 +35,7 @@ export default function AthleteLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
@@ -41,7 +44,7 @@ export default function AthleteLayout() {
       <Tabs.Screen
         name="goals"
         options={{
-          title: 'Goals',
+          title: t('tabs.goals'),
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="flag" size={size} color={color} />
@@ -51,7 +54,7 @@ export default function AthleteLayout() {
       <Tabs.Screen
         name="development"
         options={{
-          title: 'Development',
+          title: t('tabs.development'),
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="trending-up" size={size} color={color} />
@@ -61,7 +64,7 @@ export default function AthleteLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: t('tabs.settings'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings" size={size} color={color} />
           ),

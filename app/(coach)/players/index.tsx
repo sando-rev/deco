@@ -5,16 +5,21 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
+  ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useCoachTeam, useTeamMembers } from '../../../src/hooks/useTeam';
+import { useTranslation } from 'react-i18next';
+import { useTeamMembers } from '../../../src/hooks/useTeam';
+import { useActiveTeam } from '../../../src/hooks/useActiveTeam';
 import { PlayerCard } from '../../../src/components/PlayerCard';
 import { Colors, Spacing, FontSize } from '../../../src/constants/theme';
 
 export default function PlayersScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
-  const { data: team, isLoading: loadingTeam } = useCoachTeam();
+  const { activeTeam: team, teams, setActiveTeam, isLoading: loadingTeam } = useActiveTeam();
   const { data: members, isLoading: loadingMembers } = useTeamMembers(team?.id);
 
   const isLoading = loadingTeam || loadingMembers;
@@ -25,9 +30,26 @@ export default function PlayersScreen() {
         <View style={styles.teamHeader}>
           <Text style={styles.teamName}>{team.name}</Text>
           <Text style={styles.playerCount}>
-            {members?.length ?? 0} player{members?.length !== 1 ? 's' : ''}
+            {t('coach.playerCount', { count: members?.length ?? 0 })}
           </Text>
         </View>
+      )}
+
+      {/* Team selector */}
+      {teams.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }} contentContainerStyle={{ gap: Spacing.sm, paddingHorizontal: Spacing.lg }}>
+          {teams.map((t) => (
+            <TouchableOpacity
+              key={t.id}
+              style={[
+                { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: 999, backgroundColor: t.id === team?.id ? Colors.primary : Colors.surfaceSecondary, borderWidth: 1.5, borderColor: t.id === team?.id ? Colors.primary : Colors.border },
+              ]}
+              onPress={() => setActiveTeam(t)}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600', color: t.id === team?.id ? Colors.white : Colors.textSecondary }}>{t.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       )}
 
       {isLoading ? (
@@ -54,10 +76,9 @@ export default function PlayersScreen() {
       ) : (
         <View style={styles.empty}>
           <Ionicons name="people-outline" size={48} color={Colors.textTertiary} />
-          <Text style={styles.emptyTitle}>No players yet</Text>
+          <Text style={styles.emptyTitle}>{t('coach.noPlayersTitle')}</Text>
           <Text style={styles.emptyText}>
-            Share your team invite code with your athletes so they can connect
-            with you. Go to the Team tab to find your code.
+            {t('coach.noPlayersDesc')}
           </Text>
         </View>
       )}

@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '../src/hooks/useAuth';
 import { useNotifications } from '../src/hooks/useNotifications';
 import { Colors } from '../src/constants/theme';
 import { StatusBar } from 'expo-status-bar';
+import '../src/i18n';
 
 export { ErrorBoundary } from 'expo-router';
 

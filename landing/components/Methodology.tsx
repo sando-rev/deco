@@ -2,30 +2,30 @@ export function Methodology() {
   const steps = [
     {
       num: "01",
-      title: "Awareness",
+      title: "Bewustzijn",
       description:
-        "Know where you stand. Self-assess across 8 skill dimensions and see your strengths and gaps clearly.",
+        "Weet waar je staat. Beoordeel jezelf op 8 vaardigheidsdimensies en zie je sterke punten en hiaten duidelijk.",
       color: "bg-deco-primary/10 text-deco-primary",
     },
     {
       num: "02",
-      title: "Intention",
+      title: "Intentie",
       description:
-        "Set specific goals for the 2-3 areas that matter most. AI feedback ensures your goals are actionable.",
+        "Stel specifieke doelen voor de 2-3 gebieden die er het meest toe doen. AI-feedback zorgt ervoor dat je doelen uitvoerbaar zijn.",
       color: "bg-deco-accent/10 text-deco-accent",
     },
     {
       num: "03",
-      title: "Deliberate Practice",
+      title: "Bewust oefenen",
       description:
-        "Every training session has focus. Pre-session reminders keep your development points front and center.",
+        "Elke training heeft een focus. Herinneringen voor de sessie houden je ontwikkelpunten centraal.",
       color: "bg-blue-50 text-blue-600",
     },
     {
       num: "04",
-      title: "Growth",
+      title: "Groei",
       description:
-        "Reflect, track, repeat. Watch your skills evolve over weeks and months of intentional development.",
+        "Reflecteer, volg bij, herhaal. Zie je vaardigheden evolueren over weken en maanden van intentionele ontwikkeling.",
       color: "bg-green-50 text-green-600",
     },
   ];
@@ -35,12 +35,12 @@ export function Methodology() {
       <div className="max-w-6xl mx-auto px-6">
         <div className="max-w-2xl mx-auto text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-deco-text tracking-tight mb-4">
-            Built on how real development happens
+            Gebaseerd op hoe echte ontwikkeling werkt
           </h2>
           <p className="text-base text-deco-text-secondary leading-relaxed">
-            Sports psychology shows that growth follows a pattern: awareness of
-            where you are, intention to improve, focused practice, and
-            reflection. Deco turns this cycle into a daily habit.
+            Sportpsychologie laat zien dat groei een patroon volgt: bewustzijn
+            van waar je staat, intentie om te verbeteren, gerichte oefening en
+            reflectie. Deco maakt van deze cyclus een dagelijkse gewoonte.
           </p>
         </div>
 
@@ -60,14 +60,14 @@ export function Methodology() {
             </div>
             <div>
               <h3 className="text-lg font-bold text-red-900 mb-2">
-                The problem every coach faces
+                Het probleem dat elke coach kent
               </h3>
               <p className="text-sm text-red-800/80 leading-relaxed">
-                A coach has development conversations with 15+ players. Each
-                player is told to focus on 2-3 improvement areas. Within weeks,
-                <span className="font-semibold"> both forget</span> what was
-                discussed. Training sessions pass without intention. The
-                development conversation was wasted.
+                Een coach voert ontwikkelgesprekken met 15+ spelers. Elke
+                speler krijgt de opdracht zich te richten op 2-3 verbeterpunten. Binnen enkele weken
+                <span className="font-semibold"> vergeten beiden</span> wat er
+                besproken is. Trainingen gaan voorbij zonder intentie. Het
+                ontwikkelgesprek was voor niets.
               </p>
             </div>
           </div>

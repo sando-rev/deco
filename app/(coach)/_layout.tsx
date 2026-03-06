@@ -1,8 +1,11 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '../../src/constants/theme';
 
 export default function CoachLayout() {
+  const { t } = useTranslation();
+
   return (
     <Tabs
       screenOptions={{
@@ -32,7 +35,7 @@ export default function CoachLayout() {
       <Tabs.Screen
         name="players"
         options={{
-          title: 'Players',
+          title: t('tabs.players'),
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
@@ -42,7 +45,7 @@ export default function CoachLayout() {
       <Tabs.Screen
         name="team"
         options={{
-          title: 'Team',
+          title: t('tabs.team'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="shield" size={size} color={color} />
           ),
@@ -51,7 +54,7 @@ export default function CoachLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: t('tabs.settings'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings" size={size} color={color} />
           ),

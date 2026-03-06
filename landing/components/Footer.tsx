@@ -15,8 +15,7 @@ export function Footer() {
           <span className="text-sm font-bold text-deco-text">Deco</span>
         </div>
         <p className="text-xs text-deco-text-tertiary">
-          &copy; {new Date().getFullYear()} Deco. Built for field hockey
-          development.
+          &copy; {new Date().getFullYear()} Deco. Gemaakt voor hockeyontwikkeling.
         </p>
       </div>
     </footer>

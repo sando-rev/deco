@@ -10,26 +10,29 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { useCoachTeam, useTeamMembers } from '../../src/hooks/useTeam';
+import { useTranslation } from 'react-i18next';
+import { useTeamMembers } from '../../src/hooks/useTeam';
+import { useActiveTeam } from '../../src/hooks/useActiveTeam';
 import { Card } from '../../src/components/ui/Card';
 import { Button } from '../../src/components/ui/Button';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../src/constants/theme';
 
 export default function TeamScreen() {
-  const { data: team } = useCoachTeam();
+  const { t } = useTranslation();
+  const { activeTeam: team, teams, setActiveTeam } = useActiveTeam();
   const { data: members } = useTeamMembers(team?.id);
 
   const copyCode = async () => {
     if (team?.invite_code) {
       await Clipboard.setStringAsync(team.invite_code);
-      Alert.alert('Copied!', 'Invite code copied to clipboard.');
+      Alert.alert(t('coach.copied'), t('coach.copiedMsg'));
     }
   };
 
   const shareCode = async () => {
     if (team) {
       await Share.share({
-        message: `Join my team "${team.name}" on Deco! Use invite code: ${team.invite_code}`,
+        message: t('coach.shareMsg', { name: team.name, code: team.invite_code }),
       });
     }
   };
@@ -38,13 +41,30 @@ export default function TeamScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="shield-outline" size={48} color={Colors.textTertiary} />
-        <Text style={styles.emptyTitle}>No team found</Text>
+        <Text style={styles.emptyTitle}>{t('coach.noTeam')}</Text>
       </View>
     );
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Team selector */}
+      {teams.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }} contentContainerStyle={{ gap: Spacing.sm, paddingHorizontal: Spacing.lg }}>
+          {teams.map((t) => (
+            <TouchableOpacity
+              key={t.id}
+              style={[
+                { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: 999, backgroundColor: t.id === team?.id ? Colors.primary : Colors.surfaceSecondary, borderWidth: 1.5, borderColor: t.id === team?.id ? Colors.primary : Colors.border },
+              ]}
+              onPress={() => setActiveTeam(t)}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600', color: t.id === team?.id ? Colors.white : Colors.textSecondary }}>{t.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
       {/* Team info */}
       <Card style={styles.teamCard}>
         <View style={styles.teamIcon}>
@@ -52,15 +72,15 @@ export default function TeamScreen() {
         </View>
         <Text style={styles.teamName}>{team.name}</Text>
         <Text style={styles.memberCount}>
-          {members?.length ?? 0} player{members?.length !== 1 ? 's' : ''}
+          {t('coach.playerCount', { count: members?.length ?? 0 })}
         </Text>
       </Card>
 
       {/* Invite code */}
-      <Text style={styles.sectionTitle}>Invite Code</Text>
+      <Text style={styles.sectionTitle}>{t('coach.inviteCode')}</Text>
       <Card style={styles.codeCard}>
         <Text style={styles.codeDescription}>
-          Share this code with your athletes so they can join your team.
+          {t('coach.inviteCodeDesc')}
         </Text>
         <View style={styles.codeRow}>
           <Text style={styles.codeText}>{team.invite_code}</Text>
@@ -69,7 +89,7 @@ export default function TeamScreen() {
           </TouchableOpacity>
         </View>
         <Button
-          title="Share Invite Code"
+          title={t('coach.shareInviteCode')}
           onPress={shareCode}
           variant="outline"
           icon={<Ionicons name="share-outline" size={18} color={Colors.primary} />}
@@ -78,7 +98,7 @@ export default function TeamScreen() {
       </Card>
 
       {/* Members list */}
-      <Text style={styles.sectionTitle}>Team Members</Text>
+      <Text style={styles.sectionTitle}>{t('coach.teamMembers')}</Text>
       {members && members.length > 0 ? (
         members.map((member) => (
           <Card key={member.athlete_id} style={styles.memberCard} padding={Spacing.md}>
@@ -96,7 +116,7 @@ export default function TeamScreen() {
               <View style={styles.memberInfo}>
                 <Text style={styles.memberName}>{member.profile.full_name}</Text>
                 <Text style={styles.memberGoals}>
-                  {member.active_goals_count} active goal{member.active_goals_count !== 1 ? 's' : ''}
+                  {t('coach.activeGoals', { count: member.active_goals_count })}
                 </Text>
               </View>
             </View>
@@ -104,7 +124,7 @@ export default function TeamScreen() {
         ))
       ) : (
         <Text style={styles.emptyText}>
-          No players have joined yet. Share the invite code above!
+          {t('coach.noPlayers')}
         </Text>
       )}
     </ScrollView>

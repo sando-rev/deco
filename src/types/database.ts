@@ -5,6 +5,8 @@ export type GoalStatus = 'active' | 'achieved' | 'abandoned';
 export type SessionType = 'training' | 'match';
 export type SkillCategory = 'technical' | 'tactical' | 'physical' | 'mental';
 export type ScheduleSessionType = 'training' | 'match' | 'gym' | 'other';
+export type PositionType = 'outfield' | 'goalkeeper';
+export type SkillPositionType = 'outfield' | 'goalkeeper' | 'both';
 
 /** @deprecated Use SkillDefinition and dynamic skills instead */
 export type AttributeKey =
@@ -29,9 +31,12 @@ export interface Profile {
   role: Role;
   full_name: string;
   sport: string;
+  position: PositionType | null;
+  default_match_day: number | null;
   push_token: string | null;
   notification_prefs: NotificationPrefs;
   onboarding_completed: boolean;
+  language: 'nl' | 'en';
   created_at: string;
 }
 
@@ -39,8 +44,13 @@ export interface Team {
   id: string;
   name: string;
   invite_code: string;
-  coach_id: string;
   created_at: string;
+}
+
+export interface TeamCoach {
+  team_id: string;
+  coach_id: string;
+  joined_at: string;
 }
 
 export interface TeamMember {
@@ -71,8 +81,10 @@ export interface SkillDefinition {
   label: string;
   description: string;
   category: SkillCategory;
+  position_type: SkillPositionType;
   icon: string;
   display_order: number;
+  created_by_athlete_id: string | null;
 }
 
 export interface AthleteSelectedSkill {
@@ -187,4 +199,13 @@ export interface TeamMemberWithProfile extends TeamMember {
   selected_skills_count: number;
   active_goals_count: number;
   last_reflection_date: string | null;
+}
+
+export interface MatchDate {
+  id: string;
+  athlete_id: string;
+  date: string;
+  start_time: string | null;
+  label: string | null;
+  created_at: string;
 }

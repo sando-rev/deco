@@ -26,9 +26,9 @@ CREATE POLICY "Coaches view team members training schedules"
   USING (
     EXISTS (
       SELECT 1 FROM deco.team_members tm
-      JOIN deco.teams t ON t.id = tm.team_id
+      JOIN deco.team_coaches tc ON tc.team_id = tm.team_id
       WHERE tm.athlete_id = training_schedules.athlete_id
-      AND t.coach_id = auth.uid()
+      AND tc.coach_id = auth.uid()
     )
   );
 
@@ -64,8 +64,8 @@ CREATE POLICY "Coaches view team members scheduled sessions"
   USING (
     EXISTS (
       SELECT 1 FROM deco.team_members tm
-      JOIN deco.teams t ON t.id = tm.team_id
+      JOIN deco.team_coaches tc ON tc.team_id = tm.team_id
       WHERE tm.athlete_id = scheduled_sessions.athlete_id
-      AND t.coach_id = auth.uid()
+      AND tc.coach_id = auth.uid()
     )
   );

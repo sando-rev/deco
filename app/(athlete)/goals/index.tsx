@@ -9,21 +9,23 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useGoals } from '../../../src/hooks/useGoals';
 import { useSkillDefinitions } from '../../../src/hooks/useSkills';
 import { GoalCard } from '../../../src/components/GoalCard';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
 import { GoalStatus } from '../../../src/types/database';
 
-const TABS: { key: GoalStatus | 'all'; label: string }[] = [
-  { key: 'active', label: 'Active' },
-  { key: 'achieved', label: 'Achieved' },
-  { key: 'all', label: 'All' },
-];
-
 export default function GoalsScreen() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<GoalStatus | 'all'>('active');
   const router = useRouter();
+
+  const TABS: { key: GoalStatus | 'all'; label: string }[] = [
+    { key: 'active', label: t('goals.active') },
+    { key: 'achieved', label: t('goals.achieved') },
+    { key: 'all', label: t('goals.all') },
+  ];
   const { data: goals, isLoading } = useGoals(
     undefined,
     activeTab === 'all' ? undefined : activeTab
@@ -75,9 +77,9 @@ export default function GoalsScreen() {
       ) : (
         <View style={styles.empty}>
           <Ionicons name="flag-outline" size={48} color={Colors.textTertiary} />
-          <Text style={styles.emptyTitle}>No goals yet</Text>
+          <Text style={styles.emptyTitle}>{t('goals.noGoals')}</Text>
           <Text style={styles.emptyText}>
-            Set your first development goal to start tracking your progress.
+            {t('goals.noGoalsDesc')}
           </Text>
         </View>
       )}

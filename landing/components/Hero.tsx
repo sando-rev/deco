@@ -14,29 +14,29 @@ export function Hero({ onSelectRole }: HeroProps) {
         {/* Left: Text */}
         <div>
           <div className="inline-block px-3 py-1 bg-deco-primary/10 text-deco-primary text-xs font-semibold rounded-full mb-6">
-            Built for field hockey
+            Gemaakt voor hockey
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-deco-text leading-tight tracking-tight mb-6">
-            Every training session,{" "}
-            <span className="text-deco-primary">with intention.</span>
+            Elke training,{" "}
+            <span className="text-deco-primary">met intentie.</span>
           </h1>
           <p className="text-lg text-deco-text-secondary leading-relaxed mb-8 max-w-lg">
-            Deco is a development coaching app for field hockey. Athletes set
-            goals, reflect after every session, and track their growth. Coaches
-            stay connected to every player&apos;s journey.
+            Deco is een ontwikkelcoaching-app voor hockey. Spelers stellen
+            doelen, reflecteren na elke sessie en volgen hun groei. Coaches
+            blijven verbonden met het traject van elke speler.
           </p>
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => onSelectRole("athlete")}
               className="bg-deco-primary text-white px-6 py-3 rounded-full font-semibold hover:bg-deco-primary-dark transition-colors"
             >
-              I&apos;m an Athlete
+              Ik ben speler
             </button>
             <button
               onClick={() => onSelectRole("coach")}
               className="border-2 border-deco-primary text-deco-primary px-6 py-3 rounded-full font-semibold hover:bg-deco-primary hover:text-white transition-colors"
             >
-              I&apos;m a Coach
+              Ik ben coach
             </button>
           </div>
         </div>
@@ -46,10 +46,10 @@ export function Hero({ onSelectRole }: HeroProps) {
           <PhoneMockup className="w-[260px] sm:w-[280px]">
             <div className="w-full h-full bg-deco-bg flex flex-col items-center pt-14 px-4">
               <div className="text-sm font-bold text-deco-text mb-1">
-                Your Profile
+                Jouw profiel
               </div>
               <div className="text-[10px] text-deco-text-secondary mb-3">
-                Performance overview
+                Prestatieoverzicht
               </div>
               <RadarChartWeb size={200} />
               <div className="grid grid-cols-4 gap-2 mt-4 w-full">

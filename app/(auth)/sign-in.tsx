@@ -9,12 +9,14 @@ import {
   Alert,
 } from 'react-native';
 import { Link } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/hooks/useAuth';
 import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
 import { Colors, Spacing, FontSize } from '../../src/constants/theme';
 
 export default function SignIn() {
+  const { t } = useTranslation();
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +24,7 @@ export default function SignIn() {
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('common.error'), t('auth.fillAllFields'));
       return;
     }
 
@@ -31,7 +33,7 @@ export default function SignIn() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Sign In Failed', error.message);
+      Alert.alert(t('auth.signInFailed'), error.message);
     }
   };
 
@@ -45,17 +47,17 @@ export default function SignIn() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={styles.logo}>Deco</Text>
-          <Text style={styles.subtitle}>Development Coach</Text>
+          <Text style={styles.logo}>{t('auth.appName')}</Text>
+          <Text style={styles.subtitle}>{t('auth.tagline')}</Text>
           <Text style={styles.tagline}>
-            Unlock your potential through structured development
+            {t('auth.subtitle')}
           </Text>
         </View>
 
         <View style={styles.form}>
           <Input
-            label="Email"
-            placeholder="your@email.com"
+            label={t('auth.email')}
+            placeholder={t('auth.emailPlaceholder')}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -63,14 +65,14 @@ export default function SignIn() {
             autoCorrect={false}
           />
           <Input
-            label="Password"
-            placeholder="Enter your password"
+            label={t('auth.password')}
+            placeholder={t('auth.passwordPlaceholder')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
           <Button
-            title="Sign In"
+            title={t('auth.signIn')}
             onPress={handleSignIn}
             loading={loading}
             size="lg"
@@ -79,9 +81,9 @@ export default function SignIn() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Text style={styles.footerText}>{t('auth.noAccount')} </Text>
           <Link href="/(auth)/sign-up" style={styles.link}>
-            Sign Up
+            {t('auth.signUp')}
           </Link>
         </View>
       </ScrollView>

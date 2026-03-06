@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { Input } from '../../../src/components/ui/Input';
@@ -18,9 +19,11 @@ import { useCreateReflection } from '../../../src/hooks/useReflections';
 import { useSkillDefinitions } from '../../../src/hooks/useSkills';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
 import { SessionType } from '../../../src/types/database';
+import { Celebration } from '../../../src/components/Celebration';
 
 export default function ReflectScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: activeGoals } = useGoals(undefined, 'active');
   const { data: skillDefs } = useSkillDefinitions();
   const createReflection = useCreateReflection();
@@ -28,6 +31,7 @@ export default function ReflectScreen() {
   const [sessionType, setSessionType] = useState<SessionType>('training');
   const [notes, setNotes] = useState('');
   const [goalRatings, setGoalRatings] = useState<Record<string, number>>({});
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const getSkillLabel = (goal: any) => {
     if (goal.skill_id && skillDefs) {
@@ -51,21 +55,26 @@ export default function ReflectScreen() {
         notes: notes.trim() || null,
         goal_ratings: ratings,
       });
-      router.back();
+      const hasHighRating = ratings.some((r) => r.rating >= 8);
+      if (hasHighRating) {
+        setShowCelebration(true);
+      } else {
+        router.back();
+      }
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert(t('common.error'), error.message);
     }
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>How did it go?</Text>
+      <Text style={styles.title}>{t('development.howDidItGo')}</Text>
       <Text style={styles.subtitle}>
-        Take a moment to reflect on your session.
+        {t('development.reflectSubtitle')}
       </Text>
 
       {/* Session type selector */}
-      <Text style={styles.label}>Session Type</Text>
+      <Text style={styles.label}>{t('development.sessionType')}</Text>
       <View style={styles.typeRow}>
         <TouchableOpacity
           style={[
@@ -85,7 +94,7 @@ export default function ReflectScreen() {
               sessionType === 'training' && styles.typeTextActive,
             ]}
           >
-            Training
+            {t('common.training')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -106,7 +115,7 @@ export default function ReflectScreen() {
               sessionType === 'match' && styles.typeTextActive,
             ]}
           >
-            Match
+            {t('common.match')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -114,7 +123,7 @@ export default function ReflectScreen() {
       {/* Rate each active goal */}
       {activeGoals && activeGoals.length > 0 && (
         <>
-          <Text style={styles.label}>Rate your progress on each goal</Text>
+          <Text style={styles.label}>{t('development.rateProgress')}</Text>
           {activeGoals.map((goal) => {
             const skillLabel = getSkillLabel(goal);
             const rating = goalRatings[goal.id] ?? 5;
@@ -145,8 +154,8 @@ export default function ReflectScreen() {
                   thumbTintColor={Colors.primary}
                 />
                 <View style={styles.sliderLabels}>
-                  <Text style={styles.sliderLabel}>No progress</Text>
-                  <Text style={styles.sliderLabel}>Great progress</Text>
+                  <Text style={styles.sliderLabel}>{t('development.noProgress')}</Text>
+                  <Text style={styles.sliderLabel}>{t('development.greatProgress')}</Text>
                 </View>
               </Card>
             );
@@ -156,8 +165,8 @@ export default function ReflectScreen() {
 
       {/* Notes */}
       <Input
-        label="Reflection notes (optional)"
-        placeholder="What went well? What can you improve next time?"
+        label={t('development.reflectionNotes')}
+        placeholder={t('development.reflectionPlaceholder')}
         value={notes}
         onChangeText={setNotes}
         multiline
@@ -166,11 +175,19 @@ export default function ReflectScreen() {
       />
 
       <Button
-        title="Save Reflection"
+        title={t('development.saveReflection')}
         onPress={handleSubmit}
         loading={createReflection.isPending}
         size="lg"
         style={styles.submitButton}
+      />
+      <Celebration
+        visible={showCelebration}
+        message={t('development.celebrationHighScore')}
+        onDismiss={() => {
+          setShowCelebration(false);
+          router.back();
+        }}
       />
     </ScrollView>
   );

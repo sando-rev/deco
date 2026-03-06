@@ -1,7 +1,10 @@
 import { Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Colors } from '../../../src/constants/theme';
 
 export default function GoalsLayout() {
+  const { t } = useTranslation();
+
   return (
     <Stack
       screenOptions={{
@@ -11,18 +14,18 @@ export default function GoalsLayout() {
         headerTintColor: Colors.text,
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Goals' }} />
+      <Stack.Screen name="index" options={{ title: t('goals.title') }} />
       <Stack.Screen
         name="new"
         options={{
-          title: 'New Goal',
+          title: t('goals.newGoal'),
           presentation: 'modal',
         }}
       />
       <Stack.Screen
         name="[id]"
         options={{
-          title: 'Goal',
+          title: t('goals.goalDetail'),
         }}
       />
     </Stack>

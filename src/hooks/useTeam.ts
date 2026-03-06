@@ -1,23 +1,32 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
-import { Team, TeamMember, Profile } from '../types/database';
+import { Team, TeamCoach, TeamMember, Profile } from '../types/database';
 import { useAuth } from './useAuth';
 
-// Coach: get my team
-export function useCoachTeam() {
+// Coach: get all my teams
+export function useCoachTeams() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['coach-team', user?.id],
+    queryKey: ['coach-teams', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: memberships, error } = await supabase
+        .from('team_coaches')
+        .select('team_id')
+        .eq('coach_id', user!.id);
+
+      if (error) throw error;
+      if (!memberships || memberships.length === 0) return [];
+
+      const teamIds = (memberships as TeamCoach[]).map((m) => m.team_id);
+
+      const { data: teams, error: tError } = await supabase
         .from('teams')
         .select('*')
-        .eq('coach_id', user!.id)
-        .single();
+        .in('id', teamIds);
 
-      if (error && error.code !== 'PGRST116') throw error;
-      return (data as Team) ?? null;
+      if (tError) throw tError;
+      return (teams as Team[]) ?? [];
     },
     enabled: !!user?.id,
   });
@@ -102,7 +111,7 @@ export function useTeamMembers(teamId: string | undefined) {
   });
 }
 
-// Coach: create team
+// Coach: create team (atomic with coach membership)
 export function useCreateTeam() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -110,23 +119,20 @@ export function useCreateTeam() {
   return useMutation({
     mutationFn: async (name: string) => {
       const { data, error } = await supabase
-        .from('teams')
-        .insert({ name, coach_id: user!.id })
-        .select()
-        .single();
+        .rpc('create_team_with_coach', { team_name: name });
 
       if (error) throw error;
       return data as Team;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['coach-team', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['coach-teams', user?.id] });
     },
   });
 }
 
-// Athlete: join team by invite code
+// Join team by invite code (works for both coaches and athletes)
 export function useJoinTeam() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -140,23 +146,39 @@ export function useJoinTeam() {
 
       if (tError || !team) throw new Error('Invalid invite code');
 
-      // Join team
-      const { error: jError } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: (team as Team).id,
-          athlete_id: user!.id,
-        });
+      if (profile?.role === 'coach') {
+        // Coach joins team_coaches
+        const { error: jError } = await supabase
+          .from('team_coaches')
+          .insert({
+            team_id: (team as Team).id,
+            coach_id: user!.id,
+          });
 
-      if (jError) {
-        if (jError.code === '23505') throw new Error('You are already on this team');
-        throw jError;
+        if (jError) {
+          if (jError.code === '23505') throw new Error('You are already on this team');
+          throw jError;
+        }
+      } else {
+        // Athlete joins team_members
+        const { error: jError } = await supabase
+          .from('team_members')
+          .insert({
+            team_id: (team as Team).id,
+            athlete_id: user!.id,
+          });
+
+        if (jError) {
+          if (jError.code === '23505') throw new Error('You are already on this team');
+          throw jError;
+        }
       }
 
       return team as Team;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-teams'] });
+      queryClient.invalidateQueries({ queryKey: ['coach-teams', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['my-teams', user?.id] });
     },
   });
 }

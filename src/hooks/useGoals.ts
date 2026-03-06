@@ -60,7 +60,10 @@ export function useGoalWithComments(goalId: string) {
 
 interface CreateGoalInput {
   description: string;
+  skill_id?: string;
+  deadline?: string;
   athlete_skills?: string[]; // skill labels for AI context
+  skill_label?: string; // selected skill label for AI context
 }
 
 export function useCreateGoal() {
@@ -75,6 +78,7 @@ export function useCreateGoal() {
         aiAnalysis = await getGoalFeedback({
           description: input.description,
           athlete_skills: input.athlete_skills ?? [],
+          skill_label: input.skill_label,
         });
       } catch {
         // Continue without AI feedback
@@ -93,6 +97,8 @@ export function useCreateGoal() {
           athlete_id: user!.id,
           title,
           description: input.description,
+          skill_id: input.skill_id ?? null,
+          deadline: input.deadline ?? null,
           ai_feedback: aiAnalysis?.feedback ?? null,
           ai_analysis: aiAnalysis as any,
         })
@@ -111,7 +117,7 @@ export function useCreateGoal() {
 
 export function useGetGoalFeedback() {
   return useMutation({
-    mutationFn: async (input: { description: string; athlete_skills: string[] }) => {
+    mutationFn: async (input: { description: string; athlete_skills: string[]; skill_label?: string }) => {
       return getGoalFeedback(input);
     },
   });
@@ -180,5 +186,44 @@ export function useUpdateGoalStatus() {
       queryClient.invalidateQueries({ queryKey: ['skill-scores', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['skill-score-history', user?.id] });
     },
+  });
+}
+
+export function useCoachFeedback(athleteId?: string) {
+  const { user } = useAuth();
+  const id = athleteId ?? user?.id;
+
+  return useQuery({
+    queryKey: ['coach-feedback', id],
+    queryFn: async () => {
+      // Get all goals for the athlete
+      const { data: goals, error: goalsError } = await supabase
+        .from('goals')
+        .select('id, title')
+        .eq('athlete_id', id!);
+
+      if (goalsError) throw goalsError;
+      if (!goals || goals.length === 0) return [];
+
+      const goalIds = goals.map((g: any) => g.id);
+
+      // Get coach comments for those goals
+      const { data: comments, error: commentsError } = await supabase
+        .from('coach_comments')
+        .select('*')
+        .in('goal_id', goalIds)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (commentsError) throw commentsError;
+
+      // Attach goal title to each comment
+      const goalMap = new Map(goals.map((g: any) => [g.id, g.title]));
+      return ((comments as CoachComment[]) ?? []).map((c) => ({
+        ...c,
+        goal_title: goalMap.get(c.goal_id) ?? '',
+      }));
+    },
+    enabled: !!id,
   });
 }

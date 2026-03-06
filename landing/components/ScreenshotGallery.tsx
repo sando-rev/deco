@@ -11,10 +11,10 @@ function AthleteProfileScreen() {
   return (
     <div className="w-full h-full bg-[#F8FAF9] flex flex-col pt-10 px-3">
       <div className="text-[11px] font-extrabold text-[#1A1A2E] mb-0.5">
-        Welcome back, Sarah
+        Welkom terug, Sarah
       </div>
       <div className="text-[8px] text-[#6B7280] mb-2">
-        Your performance profile
+        Jouw prestatieprofiel
       </div>
       <div className="bg-white rounded-xl p-2 mb-2 flex justify-center">
         <RadarChartWeb size={140} />
@@ -43,20 +43,20 @@ function AthleteProfileScreen() {
 function AthleteGoalsScreen() {
   const goals = [
     {
-      title: "Improve backhand accuracy",
-      attr: "Passing",
+      title: "Verbeter backhand nauwkeurigheid",
+      attr: "Passen",
       progress: 70,
       target: 8,
     },
     {
-      title: "Build sprint endurance",
+      title: "Bouw sprintconditie op",
       attr: "Fitness",
       progress: 45,
       target: 7,
     },
     {
-      title: "Lead defensive press",
-      attr: "Communication",
+      title: "Leid de verdedigende druk",
+      attr: "Communicatie",
       progress: 30,
       target: 9,
     },
@@ -64,14 +64,14 @@ function AthleteGoalsScreen() {
   return (
     <div className="w-full h-full bg-[#F8FAF9] flex flex-col pt-10 px-3">
       <div className="text-[11px] font-extrabold text-[#1A1A2E] mb-2">
-        Your Goals
+        Jouw doelen
       </div>
       <div className="flex gap-2 mb-3">
         <div className="bg-[#1B6B4A] text-white text-[8px] font-semibold px-2.5 py-1 rounded-full">
-          Active (3)
+          Actief (3)
         </div>
         <div className="bg-gray-100 text-[#6B7280] text-[8px] font-semibold px-2.5 py-1 rounded-full">
-          Achieved
+          Behaald
         </div>
       </div>
       <div className="flex flex-col gap-2">
@@ -93,7 +93,7 @@ function AthleteGoalsScreen() {
                 />
               </div>
               <div className="text-[7px] text-[#6B7280] font-semibold">
-                Target: {g.target}
+                Doel: {g.target}
               </div>
             </div>
           </div>
@@ -104,8 +104,8 @@ function AthleteGoalsScreen() {
           AI Feedback
         </div>
         <div className="text-[7px] text-[#6B7280] leading-relaxed">
-          Great goal! To make it more measurable, try adding a specific drill
-          you&apos;ll practice 3x per week...
+          Geweldig doel! Om het meetbaarder te maken, probeer een specifieke
+          oefening toe te voegen die je 3x per week uitvoert...
         </div>
       </div>
     </div>
@@ -116,23 +116,23 @@ function AthleteReflectionScreen() {
   return (
     <div className="w-full h-full bg-[#F8FAF9] flex flex-col pt-10 px-3">
       <div className="text-[11px] font-extrabold text-[#1A1A2E] mb-2">
-        Session Reflection
+        Sessiereflectie
       </div>
       <div className="flex gap-2 mb-3">
         <div className="bg-[#1B6B4A] text-white text-[8px] font-semibold px-2.5 py-1 rounded-full">
           Training
         </div>
         <div className="bg-gray-100 text-[#6B7280] text-[8px] font-semibold px-2.5 py-1 rounded-full">
-          Match
+          Wedstrijd
         </div>
       </div>
       <div className="text-[8px] font-semibold text-[#1A1A2E] mb-1.5">
-        Rate your goals
+        Beoordeel je doelen
       </div>
       {[
-        { goal: "Improve backhand accuracy", val: 7 },
-        { goal: "Build sprint endurance", val: 6 },
-        { goal: "Lead defensive press", val: 8 },
+        { goal: "Verbeter backhand nauwkeurigheid", val: 7 },
+        { goal: "Bouw sprintconditie op", val: 6 },
+        { goal: "Leid de verdedigende druk", val: 8 },
       ].map((g) => (
         <div key={g.goal} className="bg-white rounded-xl p-2.5 mb-1.5">
           <div className="text-[8px] font-semibold text-[#1A1A2E] mb-1">
@@ -153,11 +153,11 @@ function AthleteReflectionScreen() {
       ))}
       <div className="bg-white rounded-xl p-2.5 mt-1">
         <div className="text-[8px] font-semibold text-[#1A1A2E] mb-1">
-          Notes
+          Notities
         </div>
         <div className="text-[7px] text-[#6B7280] leading-relaxed">
-          Focused well on backhand passes during positional play. Need to push
-          harder in fitness drills next time...
+          Goed gefocust op backhandpassen tijdens positioneel spel. Moet harder
+          pushen bij fitnessoefeningen de volgende keer...
         </div>
       </div>
     </div>
@@ -176,16 +176,16 @@ function CoachTeamScreen() {
       <div className="text-[11px] font-extrabold text-[#1A1A2E]">
         HC Amsterdam L1
       </div>
-      <div className="text-[8px] text-[#6B7280] mb-2">4 players</div>
+      <div className="text-[8px] text-[#6B7280] mb-2">4 spelers</div>
       <div className="bg-white rounded-xl p-2.5 mb-3 flex items-center justify-between">
         <div>
-          <div className="text-[7px] text-[#6B7280]">Invite Code</div>
+          <div className="text-[7px] text-[#6B7280]">Uitnodigingscode</div>
           <div className="text-[11px] font-mono font-extrabold text-[#1B6B4A] tracking-widest">
             AMS24X
           </div>
         </div>
         <div className="bg-[#1B6B4A]/10 text-[#1B6B4A] text-[7px] font-semibold px-2 py-1 rounded-full">
-          Share
+          Delen
         </div>
       </div>
       <div className="flex flex-col gap-1.5">
@@ -208,7 +208,7 @@ function CoachTeamScreen() {
                   {p.name}
                 </div>
                 <div className="text-[7px] text-[#6B7280]">
-                  Avg: {p.score}
+                  Gem: {p.score}
                 </div>
               </div>
             </div>
@@ -235,18 +235,18 @@ function CoachPlayerScreen() {
           <div className="text-[10px] font-extrabold text-[#1A1A2E]">
             Sarah van Dijk
           </div>
-          <div className="text-[7px] text-[#6B7280]">Last active: Today</div>
+          <div className="text-[7px] text-[#6B7280]">Laatst actief: Vandaag</div>
         </div>
       </div>
       <div className="bg-white rounded-xl p-2 mb-2 flex justify-center">
         <RadarChartWeb size={120} />
       </div>
       <div className="text-[8px] font-bold text-[#1A1A2E] mb-1">
-        Active Goals
+        Actieve doelen
       </div>
       {[
-        { title: "Improve backhand accuracy", attr: "Passing" },
-        { title: "Build sprint endurance", attr: "Fitness" },
+        { title: "Verbeter backhand nauwkeurigheid", attr: "Passen" },
+        { title: "Bouw sprintconditie op", attr: "Fitness" },
       ].map((g) => (
         <div
           key={g.title}
@@ -276,42 +276,43 @@ function CoachFeedbackScreen() {
   return (
     <div className="w-full h-full bg-[#F8FAF9] flex flex-col pt-10 px-3">
       <div className="text-[11px] font-extrabold text-[#1A1A2E] mb-2">
-        Goal Feedback
+        Doelfeedback
       </div>
       <div className="bg-white rounded-xl p-2.5 mb-2">
         <div className="text-[9px] font-bold text-[#1A1A2E] mb-0.5">
-          Improve backhand accuracy
+          Verbeter backhand nauwkeurigheid
         </div>
         <div className="text-[7px] text-[#6B7280] mb-2">
-          Sarah van Dijk &middot; Passing
+          Sarah van Dijk &middot; Passen
         </div>
         <div className="bg-[#1B6B4A]/5 rounded-lg p-2 mb-2">
           <div className="flex items-center gap-1 mb-1">
             <span className="text-[10px]">👍</span>
             <div className="text-[7px] font-semibold text-[#1B6B4A]">
-              Coach endorsed this goal
+              Coach heeft dit doel goedgekeurd
             </div>
           </div>
         </div>
         <div className="bg-gray-50 rounded-lg p-2">
           <div className="text-[7px] font-semibold text-[#1A1A2E] mb-0.5">
-            Coach comment:
+            Coachreactie:
           </div>
           <div className="text-[7px] text-[#6B7280] leading-relaxed">
-            Great choice Sarah! Focus especially on your flat passes during
-            positional play. Try the wall-pass drill I showed you last Thursday.
+            Goede keuze Sarah! Focus vooral op je vlakke passen tijdens
+            positioneel spel. Probeer de wandpasoefening die ik je vorige donderdag
+            liet zien.
           </div>
         </div>
       </div>
       <div className="bg-white rounded-xl p-2.5">
         <div className="text-[9px] font-bold text-[#1A1A2E] mb-0.5">
-          Build sprint endurance
+          Bouw sprintconditie op
         </div>
         <div className="text-[7px] text-[#6B7280] mb-1.5">
           Sarah van Dijk &middot; Fitness
         </div>
         <div className="text-[7px] text-[#6B7280] italic">
-          No feedback yet — tap to comment
+          Nog geen feedback — tik om te reageren
         </div>
       </div>
     </div>
@@ -322,14 +323,14 @@ export function ScreenshotGallery({ activeRole }: ScreenshotGalleryProps) {
   const screens =
     activeRole === "athlete"
       ? [
-          { comp: <AthleteProfileScreen />, label: "Skill Profile" },
-          { comp: <AthleteGoalsScreen />, label: "Smart Goals" },
-          { comp: <AthleteReflectionScreen />, label: "Reflections" },
+          { comp: <AthleteProfileScreen />, label: "Vaardigheidsprofiel" },
+          { comp: <AthleteGoalsScreen />, label: "Slimme doelen" },
+          { comp: <AthleteReflectionScreen />, label: "Reflecties" },
         ]
       : [
-          { comp: <CoachTeamScreen />, label: "Team Overview" },
-          { comp: <CoachPlayerScreen />, label: "Player Detail" },
-          { comp: <CoachFeedbackScreen />, label: "Goal Feedback" },
+          { comp: <CoachTeamScreen />, label: "Teamoverzicht" },
+          { comp: <CoachPlayerScreen />, label: "Spelersdetail" },
+          { comp: <CoachFeedbackScreen />, label: "Doelfeedback" },
         ];
 
   return (

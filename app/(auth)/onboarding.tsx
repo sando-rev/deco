@@ -9,6 +9,7 @@ import {
   Dimensions,
   TouchableOpacity,
   Platform,
+  TextInput,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -20,27 +21,35 @@ import { useAuth } from '../../src/hooks/useAuth';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
 import { RadarChart, RadarSkill } from '../../src/components/RadarChart';
-import { useUpdateOnboardingComplete } from '../../src/hooks/useProfile';
-import { useSkillDefinitions, useSaveSelectedSkills, useSaveSkillScores } from '../../src/hooks/useSkills';
+import { useUpdateOnboardingComplete, useSavePosition, useSaveDefaultMatchDay } from '../../src/hooks/useProfile';
+import { useSkillDefinitionsForPosition, useSaveSelectedSkills, useSaveSkillScores, useCreateCustomSkill } from '../../src/hooks/useSkills';
 import { useSaveTrainingSchedule, useGenerateUpcomingSessions } from '../../src/hooks/useSchedule';
-import { useCreateTeam } from '../../src/hooks/useTeam';
-import { SKILL_CATEGORIES, DAY_LABELS, DAY_LABELS_FULL } from '../../src/constants/skills';
+import { useCreateTeam, useJoinTeam } from '../../src/hooks/useTeam';
+import { SKILL_CATEGORIES, DAY_LABELS, DAY_LABELS_FULL, DISPLAY_DAY_ORDER, dayOfWeekToDisplayIndex } from '../../src/constants/skills';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../src/constants/theme';
-import { SkillCategory, SkillDefinition, ScheduleSessionType, TrainingSchedule } from '../../src/types/database';
+import { PositionType, SkillCategory, SkillDefinition, SkillPositionType, ScheduleSessionType, TrainingSchedule } from '../../src/types/database';
 import { supabase } from '../../src/services/supabase';
+import { useCreateGoal, useGetGoalFeedback } from '../../src/hooks/useGoals';
+import { addWeeks, format } from 'date-fns';
+import { nl, enUS as enLocale } from 'date-fns/locale';
+import { GoalAnalysisCard } from '../../src/components/GoalAnalysisCard';
+import { useTranslation } from 'react-i18next';
 
 type OnboardingStep =
   | 'welcome'
+  | 'position'
   | 'technical'
   | 'tactical'
   | 'physical'
   | 'mental'
   | 'notifications'
   | 'schedule'
-  | 'scoring';
+  | 'scoring'
+  | 'goal';
 
 const STEP_ORDER: OnboardingStep[] = [
   'welcome',
+  'position',
   'technical',
   'tactical',
   'physical',
@@ -48,6 +57,7 @@ const STEP_ORDER: OnboardingStep[] = [
   'notifications',
   'schedule',
   'scoring',
+  'goal',
 ];
 
 export default function Onboarding() {
@@ -62,6 +72,7 @@ export default function Onboarding() {
 
 // ─── Progress Indicator ────────────────────────────────
 function ProgressBar({ currentStep }: { currentStep: OnboardingStep }) {
+  const { t } = useTranslation();
   const currentIndex = STEP_ORDER.indexOf(currentStep);
   const totalSteps = STEP_ORDER.length;
   const progress = (currentIndex / (totalSteps - 1)) * 100;
@@ -72,7 +83,7 @@ function ProgressBar({ currentStep }: { currentStep: OnboardingStep }) {
         <View style={[progressStyles.fill, { width: `${progress}%` }]} />
       </View>
       <Text style={progressStyles.text}>
-        Step {currentIndex + 1} of {totalSteps}
+        {t('onboarding.stepOf', { step: currentIndex + 1, total: totalSteps })}
       </Text>
     </View>
   );
@@ -105,6 +116,7 @@ const progressStyles = StyleSheet.create({
 
 // ─── Welcome Step ──────────────────────────────────────
 function WelcomeStep({ onContinue }: { onContinue: () => void }) {
+  const { t } = useTranslation();
   const fadeQuote = useRef(new Animated.Value(0)).current;
   const fadeContent = useRef(new Animated.Value(0)).current;
   const fadeButton = useRef(new Animated.Value(0)).current;
@@ -139,39 +151,36 @@ function WelcomeStep({ onContinue }: { onContinue: () => void }) {
         <Animated.View style={{ opacity: fadeQuote }}>
           <Text style={welcomeStyles.quoteMark}>"</Text>
           <Text style={welcomeStyles.quoteText}>
-            It's not about the number of hours you practice, it's about the
-            number of hours your mind is present during the practice.
+            It's not about the number of hours you practice, it's about the number of hours your mind is present during the practice.
           </Text>
           <Text style={welcomeStyles.quoteAuthor}>— Kobe Bryant</Text>
         </Animated.View>
       </View>
 
       <Animated.View style={[welcomeStyles.messageSection, { opacity: fadeContent }]}>
-        <Text style={welcomeStyles.messageTitle}>Development starts with awareness</Text>
+        <Text style={welcomeStyles.messageTitle}>{t('onboarding.welcomeTitle')}</Text>
         <Text style={welcomeStyles.messageText}>
-          Coaches set focus points that get forgotten within weeks. Deco keeps
-          your development goals front and center — so every training session
-          counts.
+          {t('onboarding.welcomeMessage')}
         </Text>
         <View style={welcomeStyles.points}>
           <View style={welcomeStyles.point}>
             <Ionicons name="analytics-outline" size={20} color={Colors.primaryLight} />
-            <Text style={welcomeStyles.pointText}>Track your skills over time</Text>
+            <Text style={welcomeStyles.pointText}>{t('onboarding.welcomePoint1')}</Text>
           </View>
           <View style={welcomeStyles.point}>
             <Ionicons name="flag-outline" size={20} color={Colors.primaryLight} />
-            <Text style={welcomeStyles.pointText}>Set focused development goals</Text>
+            <Text style={welcomeStyles.pointText}>{t('onboarding.welcomePoint2')}</Text>
           </View>
           <View style={welcomeStyles.point}>
             <Ionicons name="chatbubble-outline" size={20} color={Colors.primaryLight} />
-            <Text style={welcomeStyles.pointText}>Stay connected with your coach</Text>
+            <Text style={welcomeStyles.pointText}>{t('onboarding.welcomePoint3')}</Text>
           </View>
         </View>
       </Animated.View>
 
       <Animated.View style={[welcomeStyles.buttonContainer, { opacity: fadeButton }]}>
         <Button
-          title="Get Started"
+          title={t('onboarding.getStarted')}
           onPress={onContinue}
           size="lg"
           style={welcomeStyles.button}
@@ -264,6 +273,118 @@ const welcomeStyles = StyleSheet.create({
   },
 });
 
+// ─── Position Selection Step ────────────────────────────
+function PositionSelectionStep({
+  onSelect,
+}: {
+  onSelect: (position: PositionType) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <View style={positionStyles.container}>
+      <View style={positionStyles.header}>
+        <Ionicons name="person-circle-outline" size={48} color={Colors.primary} />
+        <Text style={positionStyles.title}>{t('onboarding.positionTitle')}</Text>
+        <Text style={positionStyles.subtitle}>
+          {t('onboarding.positionSubtitle')}
+        </Text>
+      </View>
+
+      <View style={positionStyles.cardRow}>
+        <TouchableOpacity
+          style={positionStyles.card}
+          onPress={() => onSelect('outfield')}
+          activeOpacity={0.75}
+        >
+          <View style={positionStyles.cardIconContainer}>
+            <Ionicons name="football-outline" size={48} color={Colors.primary} />
+          </View>
+          <Text style={positionStyles.cardTitle}>{t('onboarding.outfield')}</Text>
+          <Text style={positionStyles.cardDesc}>
+            {t('onboarding.outfieldDesc')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={positionStyles.card}
+          onPress={() => onSelect('goalkeeper')}
+          activeOpacity={0.75}
+        >
+          <View style={positionStyles.cardIconContainer}>
+            <Ionicons name="shield-outline" size={48} color={Colors.primary} />
+          </View>
+          <Text style={positionStyles.cardTitle}>{t('onboarding.goalkeeper')}</Text>
+          <Text style={positionStyles.cardDesc}>
+            {t('onboarding.goalkeeperDesc')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const positionStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xxl,
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: Spacing.xxl,
+    gap: Spacing.sm,
+  },
+  title: {
+    fontSize: FontSize.xxl,
+    fontWeight: '800',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: FontSize.md,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  card: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.md,
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  cardIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  cardTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: '800',
+    color: Colors.text,
+  },
+  cardDesc: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+});
+
 // ─── Skill Selection Step ──────────────────────────────
 function SkillSelectionStep({
   category,
@@ -272,6 +393,8 @@ function SkillSelectionStep({
   onToggle,
   onContinue,
   onBack,
+  position,
+  onSkillCreated,
 }: {
   category: (typeof SKILL_CATEGORIES)[0];
   skills: SkillDefinition[];
@@ -279,11 +402,40 @@ function SkillSelectionStep({
   onToggle: (skillId: string) => void;
   onContinue: () => void;
   onBack: () => void;
+  position: PositionType;
+  onSkillCreated: (skill: SkillDefinition) => void;
 }) {
+  const { t } = useTranslation();
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customLabel, setCustomLabel] = useState('');
+  const [customDescription, setCustomDescription] = useState('');
+  const createCustomSkill = useCreateCustomSkill();
+
   const categorySkills = skills.filter((s) => s.category === category.key);
   const selectedCount = categorySkills.filter((s) => selectedIds.includes(s.id)).length;
   const canContinue = selectedCount >= category.minSelection;
   const atMax = selectedCount >= category.maxSelection;
+
+  const hasCustomInCategory = categorySkills.some((s) => s.created_by_athlete_id !== null);
+
+  const handleAddCustomSkill = async () => {
+    if (!customLabel.trim()) return;
+    try {
+      const newSkill = await createCustomSkill.mutateAsync({
+        label: customLabel.trim(),
+        description: customDescription.trim(),
+        category: category.key,
+        position_type: position as SkillPositionType,
+      });
+      onSkillCreated(newSkill);
+      onToggle(newSkill.id);
+      setCustomLabel('');
+      setCustomDescription('');
+      setShowCustomForm(false);
+    } catch (error: any) {
+      Alert.alert(t('common.error'), error.message ?? t('onboarding.customSkillError'));
+    }
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -293,12 +445,11 @@ function SkillSelectionStep({
         </View>
         <Text style={styles.title}>{category.label}</Text>
         <Text style={styles.description}>
-          {category.description}. Pick at least {category.minSelection} and up to{' '}
-          {category.maxSelection} skills that are relevant to your position or playing style.
+          {category.description}
         </Text>
         <View style={styles.selectionCounter}>
           <Text style={[styles.counterText, canContinue && styles.counterTextValid]}>
-            {selectedCount} of {category.minSelection}-{category.maxSelection} selected
+            {t('onboarding.selectionCount', { count: selectedCount, min: category.minSelection, max: category.maxSelection })}
           </Text>
         </View>
       </View>
@@ -338,12 +489,70 @@ function SkillSelectionStep({
             </TouchableOpacity>
           );
         })}
+
+        {!hasCustomInCategory && !showCustomForm && (
+          <TouchableOpacity
+            style={customSkillStyles.addButton}
+            onPress={() => setShowCustomForm(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
+            <Text style={customSkillStyles.addButtonText}>{t('onboarding.addCustomSkill')}</Text>
+          </TouchableOpacity>
+        )}
+
+        {showCustomForm && (
+          <View style={customSkillStyles.formContainer}>
+            <TextInput
+              style={customSkillStyles.input}
+              placeholder={t('onboarding.skillName')}
+              placeholderTextColor={Colors.textTertiary}
+              value={customLabel}
+              onChangeText={setCustomLabel}
+              autoFocus
+            />
+            <TextInput
+              style={customSkillStyles.input}
+              placeholder={t('onboarding.skillDescription')}
+              placeholderTextColor={Colors.textTertiary}
+              value={customDescription}
+              onChangeText={setCustomDescription}
+            />
+            <View style={customSkillStyles.formButtonRow}>
+              <TouchableOpacity
+                style={customSkillStyles.cancelButton}
+                onPress={() => {
+                  setShowCustomForm(false);
+                  setCustomLabel('');
+                  setCustomDescription('');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={customSkillStyles.cancelButtonText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  customSkillStyles.submitButton,
+                  (!customLabel.trim() || createCustomSkill.isPending) &&
+                    customSkillStyles.submitButtonDisabled,
+                ]}
+                onPress={handleAddCustomSkill}
+                disabled={!customLabel.trim() || createCustomSkill.isPending}
+                activeOpacity={0.7}
+              >
+                <Text style={customSkillStyles.submitButtonText}>
+                  {createCustomSkill.isPending ? t('common.loading') : t('common.add')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
 
       <View style={styles.buttonRow}>
-        <Button title="Back" onPress={onBack} variant="outline" style={{ flex: 1 }} />
+        <Button title={t('common.back')} onPress={onBack} variant="outline" style={{ flex: 1 }} />
         <Button
-          title="Continue"
+          title={t('common.next')}
           onPress={onContinue}
           disabled={!canContinue}
           style={{ flex: 1 }}
@@ -353,6 +562,77 @@ function SkillSelectionStep({
   );
 }
 
+const customSkillStyles = StyleSheet.create({
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+    borderColor: Colors.primary + '40',
+    borderStyle: 'dashed',
+  },
+  addButtonText: {
+    fontSize: FontSize.md,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  formContainer: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+    borderColor: Colors.primary + '40',
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  input: {
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    fontSize: FontSize.md,
+    color: Colors.text,
+  },
+  formButtonRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  cancelButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  cancelButtonText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  submitButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.primary,
+  },
+  submitButtonDisabled: {
+    opacity: 0.4,
+  },
+  submitButtonText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.white,
+  },
+});
+
 // ─── Notification Step ─────────────────────────────────
 function NotificationStep({
   onContinue,
@@ -361,6 +641,7 @@ function NotificationStep({
   onContinue: () => void;
   onBack: () => void;
 }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
@@ -397,16 +678,26 @@ function NotificationStep({
     onContinue();
   };
 
+  const handleSkip = () => {
+    Alert.alert(
+      t('settings.disableConfirm'),
+      t('onboarding.notificationsDesc'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('onboarding.skipNotifications'), onPress: onContinue },
+      ]
+    );
+  };
+
   return (
     <View style={notifStyles.container}>
       <View style={notifStyles.iconContainer}>
         <Ionicons name="notifications" size={64} color={Colors.primary} />
       </View>
 
-      <Text style={notifStyles.title}>Stay on track with reminders</Text>
+      <Text style={notifStyles.title}>{t('onboarding.notifications')}</Text>
       <Text style={notifStyles.subtitle}>
-        The core of Deco is keeping your development goals top of mind. Notifications make sure
-        you never forget what you're working on.
+        {t('onboarding.notificationsDesc')}
       </Text>
 
       <View style={notifStyles.benefits}>
@@ -415,8 +706,8 @@ function NotificationStep({
             <Ionicons name="time-outline" size={20} color={Colors.primary} />
           </View>
           <View style={notifStyles.benefitText}>
-            <Text style={notifStyles.benefitTitle}>Before training</Text>
-            <Text style={notifStyles.benefitDesc}>Your focus points for today's session</Text>
+            <Text style={notifStyles.benefitTitle}>{t('settings.preTraining')}</Text>
+            <Text style={notifStyles.benefitDesc}>{t('settings.preTrainingDesc')}</Text>
           </View>
         </View>
         <View style={notifStyles.benefitRow}>
@@ -424,8 +715,8 @@ function NotificationStep({
             <Ionicons name="clipboard-outline" size={20} color={Colors.primary} />
           </View>
           <View style={notifStyles.benefitText}>
-            <Text style={notifStyles.benefitTitle}>After sessions</Text>
-            <Text style={notifStyles.benefitDesc}>Quick 2-minute reflection while it's fresh</Text>
+            <Text style={notifStyles.benefitTitle}>{t('settings.postSession')}</Text>
+            <Text style={notifStyles.benefitDesc}>{t('settings.postSessionDesc')}</Text>
           </View>
         </View>
         <View style={notifStyles.benefitRow}>
@@ -433,22 +724,22 @@ function NotificationStep({
             <Ionicons name="sparkles-outline" size={20} color={Colors.primary} />
           </View>
           <View style={notifStyles.benefitText}>
-            <Text style={notifStyles.benefitTitle}>Motivation</Text>
-            <Text style={notifStyles.benefitDesc}>Stay inspired between sessions</Text>
+            <Text style={notifStyles.benefitTitle}>{t('settings.motivational')}</Text>
+            <Text style={notifStyles.benefitDesc}>{t('settings.motivationalDesc')}</Text>
           </View>
         </View>
       </View>
 
       <View style={notifStyles.buttons}>
         <Button
-          title="Enable Notifications"
+          title={t('onboarding.allowNotifications')}
           onPress={handleEnable}
           loading={loading}
           size="lg"
           icon={<Ionicons name="notifications-outline" size={18} color={Colors.white} />}
         />
-        <TouchableOpacity onPress={onContinue} style={notifStyles.skipButton}>
-          <Text style={notifStyles.skipText}>Maybe Later</Text>
+        <TouchableOpacity onPress={handleSkip} style={notifStyles.skipButton}>
+          <Text style={notifStyles.skipText}>{t('onboarding.skipNotifications')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -539,17 +830,21 @@ function ScheduleStep({
   onBack,
   scheduleEntries,
   setScheduleEntries,
+  defaultMatchDay,
+  setDefaultMatchDay,
 }: {
   onContinue: () => void;
   onBack: () => void;
   scheduleEntries: ScheduleEntry[];
   setScheduleEntries: React.Dispatch<React.SetStateAction<ScheduleEntry[]>>;
+  defaultMatchDay: number | null;
+  setDefaultMatchDay: (day: number | null) => void;
 }) {
+  const { t } = useTranslation();
   const [showTimePicker, setShowTimePicker] = useState<{
     day: number;
     field: 'start' | 'end';
   } | null>(null);
-  const [pendingDay, setPendingDay] = useState<number | null>(null);
 
   const addSession = (day: number) => {
     if (scheduleEntries.some((e) => e.day_of_week === day)) return;
@@ -592,124 +887,145 @@ function ScheduleStep({
     return d;
   };
 
+  const sortedEntries = [...scheduleEntries].sort(
+    (a, b) => dayOfWeekToDisplayIndex(a.day_of_week) - dayOfWeekToDisplayIndex(b.day_of_week)
+  );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Ionicons name="calendar" size={32} color={Colors.primary} />
-        <Text style={styles.title}>When do you train?</Text>
+        <Text style={styles.title}>{t('onboarding.scheduleTitle')}</Text>
         <Text style={styles.description}>
-          Set your weekly schedule so Deco can send reminders at the right time.
-          Tap a day to add a session.
+          {t('onboarding.scheduleDesc')}
         </Text>
       </View>
 
       <View style={schedStyles.weekGrid}>
-        {DAY_LABELS.map((label, index) => {
-          const hasSession = scheduleEntries.some((e) => e.day_of_week === index);
+        {DISPLAY_DAY_ORDER.map((dayOfWeek) => {
+          const hasSession = scheduleEntries.some((e) => e.day_of_week === dayOfWeek);
           return (
             <TouchableOpacity
-              key={index}
+              key={dayOfWeek}
               style={[schedStyles.dayChip, hasSession && schedStyles.dayChipActive]}
-              onPress={() => (hasSession ? removeSession(index) : addSession(index))}
+              onPress={() => (hasSession ? removeSession(dayOfWeek) : addSession(dayOfWeek))}
             >
               <Text style={[schedStyles.dayLabel, hasSession && schedStyles.dayLabelActive]}>
-                {label}
+                {DAY_LABELS[dayOfWeek]}
               </Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {scheduleEntries
-        .sort((a, b) => a.day_of_week - b.day_of_week)
-        .map((entry) => (
-          <View key={entry.day_of_week} style={schedStyles.sessionCard}>
-            <View style={schedStyles.sessionHeader}>
-              <Text style={schedStyles.sessionDay}>
-                {DAY_LABELS_FULL[entry.day_of_week]}
-              </Text>
-              <TouchableOpacity onPress={() => removeSession(entry.day_of_week)}>
-                <Ionicons name="close-circle" size={20} color={Colors.textTertiary} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={schedStyles.typeRow}>
-              {(['training', 'match', 'gym'] as ScheduleSessionType[]).map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    schedStyles.typeChip,
-                    entry.session_type === type && schedStyles.typeChipActive,
-                  ]}
-                  onPress={() => {
-                    updateSession(entry.day_of_week, 'session_type', type);
-                    updateSession(
-                      entry.day_of_week,
-                      'label',
-                      type.charAt(0).toUpperCase() + type.slice(1)
-                    );
-                  }}
-                >
-                  <Text
-                    style={[
-                      schedStyles.typeText,
-                      entry.session_type === type && schedStyles.typeTextActive,
-                    ]}
-                  >
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={schedStyles.timeRow}>
-              <TouchableOpacity
-                style={schedStyles.timeButton}
-                onPress={() => setShowTimePicker({ day: entry.day_of_week, field: 'start' })}
-              >
-                <Ionicons name="time-outline" size={16} color={Colors.primary} />
-                <Text style={schedStyles.timeText}>{entry.start_time}</Text>
-              </TouchableOpacity>
-              <Text style={schedStyles.timeSeparator}>—</Text>
-              <TouchableOpacity
-                style={schedStyles.timeButton}
-                onPress={() => setShowTimePicker({ day: entry.day_of_week, field: 'end' })}
-              >
-                <Text style={schedStyles.timeText}>{entry.end_time}</Text>
-              </TouchableOpacity>
-            </View>
-
-            {showTimePicker?.day === entry.day_of_week && (
-              <DateTimePicker
-                value={parseTime(
-                  showTimePicker.field === 'start' ? entry.start_time : entry.end_time
-                )}
-                mode="time"
-                is24Hour={true}
-                onChange={handleTimeChange}
-              />
-            )}
+      {sortedEntries.map((entry) => (
+        <View key={entry.day_of_week} style={schedStyles.sessionCard}>
+          <View style={schedStyles.sessionHeader}>
+            <Text style={schedStyles.sessionDay}>
+              {DAY_LABELS_FULL[entry.day_of_week]}
+            </Text>
+            <TouchableOpacity onPress={() => removeSession(entry.day_of_week)}>
+              <Ionicons name="close-circle" size={20} color={Colors.textTertiary} />
+            </TouchableOpacity>
           </View>
-        ))}
+
+          <View style={schedStyles.typeRow}>
+            {(['training', 'match', 'gym'] as ScheduleSessionType[]).map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  schedStyles.typeChip,
+                  entry.session_type === type && schedStyles.typeChipActive,
+                ]}
+                onPress={() => {
+                  updateSession(entry.day_of_week, 'session_type', type);
+                  updateSession(
+                    entry.day_of_week,
+                    'label',
+                    type.charAt(0).toUpperCase() + type.slice(1)
+                  );
+                }}
+              >
+                <Text
+                  style={[
+                    schedStyles.typeText,
+                    entry.session_type === type && schedStyles.typeTextActive,
+                  ]}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={schedStyles.timeRow}>
+            <TouchableOpacity
+              style={schedStyles.timeButton}
+              onPress={() => setShowTimePicker({ day: entry.day_of_week, field: 'start' })}
+            >
+              <Ionicons name="time-outline" size={16} color={Colors.primary} />
+              <Text style={schedStyles.timeText}>{entry.start_time}</Text>
+            </TouchableOpacity>
+            <Text style={schedStyles.timeSeparator}>—</Text>
+            <TouchableOpacity
+              style={schedStyles.timeButton}
+              onPress={() => setShowTimePicker({ day: entry.day_of_week, field: 'end' })}
+            >
+              <Text style={schedStyles.timeText}>{entry.end_time}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {showTimePicker?.day === entry.day_of_week && (
+            <DateTimePicker
+              value={parseTime(
+                showTimePicker.field === 'start' ? entry.start_time : entry.end_time
+              )}
+              mode="time"
+              is24Hour={true}
+              onChange={handleTimeChange}
+            />
+          )}
+        </View>
+      ))}
 
       {scheduleEntries.length === 0 && (
         <View style={schedStyles.emptyState}>
           <Ionicons name="calendar-outline" size={40} color={Colors.textTertiary} />
-          <Text style={schedStyles.emptyText}>Tap the days above when you train</Text>
+          <Text style={schedStyles.emptyText}>{t('onboarding.scheduleDesc')}</Text>
         </View>
       )}
 
+      <View style={schedStyles.matchDaySection}>
+        <Text style={schedStyles.matchDayTitle}>{t('settings.defaultMatchDay')}</Text>
+        <View style={schedStyles.weekGrid}>
+          {DISPLAY_DAY_ORDER.map((dayOfWeek) => {
+            const isSelected = defaultMatchDay === dayOfWeek;
+            return (
+              <TouchableOpacity
+                key={dayOfWeek}
+                style={[schedStyles.dayChip, isSelected && schedStyles.dayChipActive]}
+                onPress={() => setDefaultMatchDay(isSelected ? null : dayOfWeek)}
+              >
+                <Text style={[schedStyles.dayLabel, isSelected && schedStyles.dayLabelActive]}>
+                  {DAY_LABELS[dayOfWeek]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
       <TouchableOpacity style={schedStyles.calendarImport} disabled>
         <Ionicons name="cloud-download-outline" size={20} color={Colors.textTertiary} />
-        <Text style={schedStyles.calendarImportText}>Import from Calendar</Text>
+        <Text style={schedStyles.calendarImportText}>{t('settings.importIcs')}</Text>
         <View style={schedStyles.comingSoonBadge}>
-          <Text style={schedStyles.comingSoonText}>Coming Soon</Text>
+          <Text style={schedStyles.comingSoonText}>Binnenkort</Text>
         </View>
       </TouchableOpacity>
 
       <View style={styles.buttonRow}>
-        <Button title="Back" onPress={onBack} variant="outline" style={{ flex: 1 }} />
-        <Button title="Continue" onPress={onContinue} style={{ flex: 1 }} />
+        <Button title={t('common.back')} onPress={onBack} variant="outline" style={{ flex: 1 }} />
+        <Button title={t('common.next')} onPress={onContinue} style={{ flex: 1 }} />
       </View>
     </ScrollView>
   );
@@ -816,6 +1132,16 @@ const schedStyles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.textTertiary,
   },
+  matchDaySection: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+  matchDayTitle: {
+    fontSize: FontSize.md,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: Spacing.md,
+  },
   calendarImport: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -859,6 +1185,7 @@ function ScoringStep({
   onBack: () => void;
   loading: boolean;
 }) {
+  const { t } = useTranslation();
   // Group skills by category
   const grouped = SKILL_CATEGORIES.map((cat) => ({
     category: cat,
@@ -874,10 +1201,9 @@ function ScoringStep({
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.title}>Rate Your Skills</Text>
+        <Text style={styles.title}>{t('onboarding.scoringTitle')}</Text>
         <Text style={styles.description}>
-          Score yourself on each skill from 1 to 10. Be honest — this is your
-          starting point for growth.
+          {t('onboarding.scoringDesc')}
         </Text>
       </View>
 
@@ -920,9 +1246,9 @@ function ScoringStep({
       ))}
 
       <View style={styles.buttonRow}>
-        <Button title="Back" onPress={onBack} variant="outline" style={{ flex: 1 }} />
+        <Button title={t('common.back')} onPress={onBack} variant="outline" style={{ flex: 1 }} />
         <Button
-          title="Complete Profile"
+          title={t('common.next')}
           onPress={onComplete}
           loading={loading}
           style={{ flex: 1 }}
@@ -954,19 +1280,316 @@ const scoringStyles = StyleSheet.create({
   },
 });
 
+// ─── Goal Setting Step ──────────────────────────────────
+function GoalSettingStep({
+  selectedSkills,
+  scores,
+  position,
+  onComplete,
+  onBack,
+}: {
+  selectedSkills: SkillDefinition[];
+  scores: Record<string, number>;
+  position: PositionType | null;
+  onComplete: () => void;
+  onBack: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  // Find the lowest scored skill
+  const lowestSkill = selectedSkills.length > 0
+    ? selectedSkills.reduce((lowest, skill) => {
+        const lowestScore = scores[lowest.id] ?? 5;
+        const currentScore = scores[skill.id] ?? 5;
+        return currentScore < lowestScore ? skill : lowest;
+      }, selectedSkills[0])
+    : null;
+
+  const [selectedSkillId, setSelectedSkillId] = useState<string>(lowestSkill?.id ?? '');
+  const [goalDescription, setGoalDescription] = useState('');
+  const [goalSaved, setGoalSaved] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [deadline, setDeadline] = useState<Date>(addWeeks(new Date(), 4));
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const createGoal = useCreateGoal();
+  const getGoalFeedback = useGetGoalFeedback();
+
+  const selectedSkillForGoal = selectedSkills.find((s) => s.id === selectedSkillId);
+
+  const handleGetFeedback = async () => {
+    if (!goalDescription.trim()) {
+      Alert.alert(t('onboarding.fillGoal'), t('onboarding.fillGoalFirst'));
+      return;
+    }
+    try {
+      const result = await getGoalFeedback.mutateAsync({
+        description: goalDescription,
+        athlete_skills: selectedSkills.map((s) => s.label),
+      });
+      setAiAnalysis(result);
+    } catch (error: any) {
+      Alert.alert(t('common.error'), error.message ?? t('onboarding.couldNotGetFeedback'));
+    }
+  };
+
+  const handleSaveGoal = async () => {
+    if (!goalDescription.trim()) {
+      Alert.alert(t('onboarding.fillGoal'), t('onboarding.writeGoalFirst'));
+      return;
+    }
+    try {
+      await createGoal.mutateAsync({
+        description: goalDescription,
+        skill_id: selectedSkillId || undefined,
+        skill_label: selectedSkillForGoal?.label,
+        athlete_skills: selectedSkills.map((s) => s.label),
+        deadline: deadline.toISOString(),
+      });
+      setGoalSaved(true);
+    } catch (error: any) {
+      Alert.alert(t('common.error'), error.message ?? t('onboarding.couldNotSaveGoal'));
+    }
+  };
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <View style={styles.categoryIconContainer}>
+          <Ionicons name="flag" size={32} color={Colors.primary} />
+        </View>
+        <Text style={styles.title}>{t('onboarding.goalTitle')}</Text>
+        {lowestSkill && (
+          <Text style={styles.description}>
+            {t('onboarding.goalDesc')}
+          </Text>
+        )}
+      </View>
+
+      <View style={goalStyles.section}>
+        <Text style={goalStyles.sectionLabel}>{t('goals.chooseSkill')}</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={goalStyles.skillPicker}
+          contentContainerStyle={goalStyles.skillPickerContent}
+        >
+          {selectedSkills.map((skill) => {
+            const isSelected = selectedSkillId === skill.id;
+            return (
+              <TouchableOpacity
+                key={skill.id}
+                style={[goalStyles.skillChip, isSelected && goalStyles.skillChipActive]}
+                onPress={() => setSelectedSkillId(skill.id)}
+              >
+                <Ionicons
+                  name={skill.icon as any}
+                  size={14}
+                  color={isSelected ? Colors.white : Colors.textSecondary}
+                />
+                <Text style={[goalStyles.skillChipText, isSelected && goalStyles.skillChipTextActive]}>
+                  {skill.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      <View style={goalStyles.section}>
+        <Text style={goalStyles.sectionLabel}>{t('goals.whatIsYourGoal')}</Text>
+        <TextInput
+          style={goalStyles.textInput}
+          placeholder={position === 'goalkeeper'
+            ? t('onboarding.goalPlaceholderGoalkeeper')
+            : t('onboarding.goalPlaceholderOutfield')}
+          placeholderTextColor={Colors.textTertiary}
+          value={goalDescription}
+          onChangeText={setGoalDescription}
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+        />
+      </View>
+
+      <View style={goalStyles.section}>
+        <Text style={goalStyles.sectionLabel}>{t('onboarding.deadline')}</Text>
+        <TouchableOpacity
+          style={goalStyles.deadlinePicker}
+          onPress={() => setShowDatePicker(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
+          <Text style={goalStyles.deadlineText}>
+            {format(deadline, 'd MMMM yyyy', { locale: i18n.language === 'en' ? enLocale : nl })}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color={Colors.textTertiary} />
+        </TouchableOpacity>
+        {showDatePicker && (
+          <DateTimePicker
+            value={deadline}
+            mode="date"
+            minimumDate={new Date()}
+            onChange={(_, date) => {
+              setShowDatePicker(Platform.OS === 'ios');
+              if (date) setDeadline(date);
+            }}
+          />
+        )}
+      </View>
+
+      {aiAnalysis && (
+        <View style={goalStyles.analysisContainer}>
+          <GoalAnalysisCard analysis={aiAnalysis} />
+        </View>
+      )}
+
+      <View style={goalStyles.actionButtons}>
+        <Button
+          title={t('goals.getAiFeedback')}
+          onPress={handleGetFeedback}
+          loading={getGoalFeedback.isPending}
+          variant="outline"
+          icon={<Ionicons name="sparkles-outline" size={16} color={Colors.primary} />}
+        />
+        <Button
+          title={t('onboarding.saveGoal')}
+          onPress={handleSaveGoal}
+          loading={createGoal.isPending}
+          disabled={goalSaved}
+          icon={goalSaved ? <Ionicons name="checkmark" size={16} color={Colors.white} /> : undefined}
+        />
+      </View>
+
+      {goalSaved && (
+        <View style={goalStyles.savedBanner}>
+          <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
+          <Text style={goalStyles.savedBannerText}>{t('onboarding.saveGoal')}</Text>
+        </View>
+      )}
+
+      <View style={styles.buttonRow}>
+        <Button title={t('common.back')} onPress={onBack} variant="outline" style={{ flex: 1 }} />
+        <Button
+          title={t('onboarding.complete')}
+          onPress={onComplete}
+          disabled={!goalSaved}
+          style={{ flex: 1 }}
+        />
+      </View>
+    </ScrollView>
+  );
+}
+
+const goalStyles = StyleSheet.create({
+  section: {
+    marginBottom: Spacing.lg,
+  },
+  sectionLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.sm,
+  },
+  skillPicker: {
+    flexGrow: 0,
+  },
+  skillPickerContent: {
+    gap: Spacing.sm,
+    paddingBottom: Spacing.xs,
+  },
+  skillChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.surfaceSecondary,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
+  skillChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  skillChipText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  skillChipTextActive: {
+    color: Colors.white,
+  },
+  textInput: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    padding: Spacing.md,
+    fontSize: FontSize.md,
+    color: Colors.text,
+    minHeight: 110,
+    lineHeight: 22,
+  },
+  deadlinePicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  deadlineText: {
+    flex: 1,
+    fontSize: FontSize.md,
+    color: Colors.text,
+    fontWeight: '500',
+  },
+  analysisContainer: {
+    marginBottom: Spacing.lg,
+  },
+  actionButtons: {
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  savedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  savedBannerText: {
+    fontSize: FontSize.md,
+    fontWeight: '600',
+    color: Colors.success,
+  },
+});
+
 // ─── Athlete Onboarding (Main Component) ───────────────
 function AthleteOnboarding() {
+  const { t } = useTranslation();
   const [step, setStep] = useState<OnboardingStep>('welcome');
+  const [position, setPosition] = useState<PositionType | null>(null);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
+  const [defaultMatchDay, setDefaultMatchDay] = useState<number | null>(null);
 
-  const { data: allSkills = [] } = useSkillDefinitions();
+  const { data: allSkills = [] } = useSkillDefinitionsForPosition(position);
   const saveSelectedSkills = useSaveSelectedSkills();
   const saveSkillScores = useSaveSkillScores();
   const saveTrainingSchedule = useSaveTrainingSchedule();
   const generateSessions = useGenerateUpcomingSessions();
   const completeOnboarding = useUpdateOnboardingComplete();
+  const savePosition = useSavePosition();
+  const saveDefaultMatchDay = useSaveDefaultMatchDay();
 
   const toggleSkill = (skillId: string) => {
     setSelectedSkillIds((prev) =>
@@ -976,10 +1599,6 @@ function AthleteOnboarding() {
 
   const handleScore = (skillId: string, value: number) => {
     setScores((prev) => ({ ...prev, [skillId]: value }));
-  };
-
-  const goToStep = (nextStep: OnboardingStep) => {
-    setStep(nextStep);
   };
 
   const goBack = () => {
@@ -996,19 +1615,31 @@ function AthleteOnboarding() {
     }
   };
 
+  const handleSelectPosition = (selectedPosition: PositionType) => {
+    setPosition(selectedPosition);
+    // Clear previously selected skills when position changes
+    setSelectedSkillIds([]);
+    goForward();
+  };
+
   const handleComplete = async () => {
     try {
-      // 1. Save selected skills
+      // 1. Save position
+      if (position) {
+        await savePosition.mutateAsync(position);
+      }
+
+      // 2. Save selected skills
       await saveSelectedSkills.mutateAsync(selectedSkillIds);
 
-      // 2. Save skill scores
+      // 3. Save skill scores
       const scoreEntries = selectedSkillIds.map((skill_id) => ({
         skill_id,
         score: scores[skill_id] ?? 5,
       }));
       await saveSkillScores.mutateAsync(scoreEntries);
 
-      // 3. Save training schedule
+      // 4. Save training schedule
       if (scheduleEntries.length > 0) {
         await saveTrainingSchedule.mutateAsync(
           scheduleEntries.map((e) => ({
@@ -1021,10 +1652,15 @@ function AthleteOnboarding() {
         );
       }
 
-      // 4. Complete onboarding
+      // 5. Save default match day
+      if (defaultMatchDay !== null) {
+        await saveDefaultMatchDay.mutateAsync(defaultMatchDay);
+      }
+
+      // 6. Complete onboarding
       await completeOnboarding.mutateAsync();
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert(t('common.error'), error.message);
     }
   };
 
@@ -1032,10 +1668,21 @@ function AthleteOnboarding() {
     saveSelectedSkills.isPending ||
     saveSkillScores.isPending ||
     saveTrainingSchedule.isPending ||
-    completeOnboarding.isPending;
+    completeOnboarding.isPending ||
+    savePosition.isPending ||
+    saveDefaultMatchDay.isPending;
 
   if (step === 'welcome') {
     return <WelcomeStep onContinue={goForward} />;
+  }
+
+  if (step === 'position') {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+        <ProgressBar currentStep={step} />
+        <PositionSelectionStep onSelect={handleSelectPosition} />
+      </View>
+    );
   }
 
   // Skill selection steps
@@ -1052,6 +1699,8 @@ function AthleteOnboarding() {
           onToggle={toggleSkill}
           onContinue={goForward}
           onBack={goBack}
+          position={position!}
+          onSkillCreated={() => {}}
         />
       </View>
     );
@@ -1075,23 +1724,41 @@ function AthleteOnboarding() {
           onBack={goBack}
           scheduleEntries={scheduleEntries}
           setScheduleEntries={setScheduleEntries}
+          defaultMatchDay={defaultMatchDay}
+          setDefaultMatchDay={setDefaultMatchDay}
         />
       </View>
     );
   }
 
-  // Scoring step
   const selectedSkills = allSkills.filter((s) => selectedSkillIds.includes(s.id));
+
+  if (step === 'scoring') {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+        <ProgressBar currentStep={step} />
+        <ScoringStep
+          selectedSkills={selectedSkills}
+          scores={scores}
+          onScore={handleScore}
+          onComplete={goForward}
+          onBack={goBack}
+          loading={false}
+        />
+      </View>
+    );
+  }
+
+  // Goal step
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <ProgressBar currentStep={step} />
-      <ScoringStep
+      <GoalSettingStep
         selectedSkills={selectedSkills}
         scores={scores}
-        onScore={handleScore}
+        position={position}
         onComplete={handleComplete}
         onBack={goBack}
-        loading={loading}
       />
     </View>
   );
@@ -1099,57 +1766,116 @@ function AthleteOnboarding() {
 
 // ─── Coach Onboarding ──────────────────────────────────
 function CoachOnboarding() {
+  const { t } = useTranslation();
+  const [mode, setMode] = useState<'choose' | 'create' | 'join'>('choose');
   const [teamName, setTeamName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const createTeam = useCreateTeam();
+  const joinTeam = useJoinTeam();
   const completeOnboarding = useUpdateOnboardingComplete();
 
-  const handleComplete = async () => {
+  const handleCreate = async () => {
     if (!teamName.trim()) {
-      Alert.alert('Error', 'Please enter a team name');
+      Alert.alert(t('common.error'), t('onboarding.coachTeamError'));
       return;
     }
-
     try {
       await createTeam.mutateAsync(teamName.trim());
       await completeOnboarding.mutateAsync();
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert(t('common.error'), error.message);
     }
   };
 
-  const loading = createTeam.isPending || completeOnboarding.isPending;
+  const handleJoin = async () => {
+    if (!inviteCode.trim()) {
+      Alert.alert(t('common.error'), t('settings.enterInviteCode'));
+      return;
+    }
+    try {
+      await joinTeam.mutateAsync(inviteCode.trim());
+      await completeOnboarding.mutateAsync();
+    } catch (error: any) {
+      Alert.alert(t('common.error'), error.message);
+    }
+  };
 
+  const loading = createTeam.isPending || joinTeam.isPending || completeOnboarding.isPending;
+
+  if (mode === 'choose') {
+    return (
+      <View style={styles.container}>
+        <View style={[styles.content, { justifyContent: 'center', flex: 1 }]}>
+          <View style={styles.header}>
+            <Ionicons name="people" size={64} color={Colors.primary} />
+            <Text style={styles.title}>{t('onboarding.coachTeamTitle')}</Text>
+          </View>
+          <View style={{ gap: Spacing.md, marginTop: Spacing.xl }}>
+            <TouchableOpacity
+              style={{ backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 2, borderColor: Colors.border, padding: Spacing.lg, alignItems: 'center', gap: Spacing.sm }}
+              onPress={() => setMode('create')}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="add-circle-outline" size={32} color={Colors.primary} />
+              <Text style={{ fontSize: FontSize.lg, fontWeight: '700', color: Colors.text }}>{t('onboarding.coachChoiceCreate')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 2, borderColor: Colors.border, padding: Spacing.lg, alignItems: 'center', gap: Spacing.sm }}
+              onPress={() => setMode('join')}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="enter-outline" size={32} color={Colors.primary} />
+              <Text style={{ fontSize: FontSize.lg, fontWeight: '700', color: Colors.text }}>{t('onboarding.coachChoiceJoin')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (mode === 'join') {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>{t('onboarding.coachChoiceJoin')}</Text>
+        </View>
+        <View style={styles.teamForm}>
+          <Ionicons name="enter-outline" size={64} color={Colors.primary} style={styles.teamIcon} />
+          <Input
+            label={t('settings.enterInviteCode')}
+            placeholder={t('settings.inviteCodePlaceholder')}
+            value={inviteCode}
+            onChangeText={setInviteCode}
+            autoCapitalize="characters"
+          />
+        </View>
+        <View style={styles.buttonRow}>
+          <Button title={t('common.back')} onPress={() => setMode('choose')} variant="outline" style={{ flex: 1 }} />
+          <Button title={t('settings.join')} onPress={handleJoin} loading={loading} style={{ flex: 1 }} />
+        </View>
+      </ScrollView>
+    );
+  }
+
+  // mode === 'create'
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.title}>Set Up Your Team</Text>
-        <Text style={styles.description}>
-          Create your team and share the invite code with your athletes so they
-          can connect with you.
-        </Text>
+        <Text style={styles.title}>{t('onboarding.coachChoiceCreate')}</Text>
       </View>
-
       <View style={styles.teamForm}>
         <Ionicons name="people" size={64} color={Colors.primary} style={styles.teamIcon} />
         <Input
-          label="Team Name"
-          placeholder="e.g., HC Amsterdam Ladies 1"
+          label={t('onboarding.coachTeamTitle')}
+          placeholder={t('onboarding.coachTeamPlaceholder')}
           value={teamName}
           onChangeText={setTeamName}
         />
-        <Text style={styles.teamHint}>
-          After creating your team, you'll get an invite code to share with your
-          athletes.
-        </Text>
       </View>
-
-      <Button
-        title="Create Team"
-        onPress={handleComplete}
-        loading={loading}
-        size="lg"
-        style={styles.completeButton}
-      />
+      <View style={styles.buttonRow}>
+        <Button title={t('common.back')} onPress={() => setMode('choose')} variant="outline" style={{ flex: 1 }} />
+        <Button title={t('onboarding.createTeam')} onPress={handleCreate} loading={loading} style={{ flex: 1 }} />
+      </View>
     </ScrollView>
   );
 }

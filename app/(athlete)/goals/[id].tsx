@@ -10,29 +10,35 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useGoalWithComments, useUpdateGoalStatus } from '../../../src/hooks/useGoals';
-import { useSkillDefinitions } from '../../../src/hooks/useSkills';
+import { useSkillDefinitions, useLatestSkillScores } from '../../../src/hooks/useSkills';
 import { GoalAnalysisCard } from '../../../src/components/GoalAnalysisCard';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
 import { Button } from '../../../src/components/ui/Button';
 import { Card } from '../../../src/components/ui/Card';
+import { Celebration } from '../../../src/components/Celebration';
 import { format, differenceInDays } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
-const IMPROVEMENT_OPTIONS = [0, 0.5, 1, 1.5, 2, 2.5, 3];
+const IMPROVEMENT_OPTIONS = [0, 0.5, 1, 1.5, 2];
 
 export default function GoalDetailScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data: goal, isLoading } = useGoalWithComments(id);
   const { data: skillDefs } = useSkillDefinitions();
+  const { data: skillScores } = useLatestSkillScores();
   const updateStatus = useUpdateGoalStatus();
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [selectedImprovement, setSelectedImprovement] = useState<number>(1);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   if (isLoading || !goal) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -52,6 +58,11 @@ export default function GoalDetailScreen() {
     return null;
   })();
 
+  // Current skill score for the goal's skill
+  const currentScore = goal.skill_id && skillScores
+    ? skillScores.find((s) => s.skill_id === goal.skill_id)?.score ?? null
+    : null;
+
   const daysLeft = goal.deadline
     ? differenceInDays(new Date(goal.deadline), new Date())
     : null;
@@ -65,27 +76,27 @@ export default function GoalDetailScreen() {
         scoreImprovement: selectedImprovement,
       });
       setShowCompleteModal(false);
-      router.back();
+      setShowCelebration(true);
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert(t('common.error'), error.message);
     }
   };
 
   const handleAbandon = () => {
     Alert.alert(
-      'Abandon Goal',
-      'Are you sure you want to abandon this goal?',
+      t('goals.abandon'),
+      t('goals.abandonConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Abandon',
+          text: t('goals.abandonButton'),
           style: 'destructive',
           onPress: async () => {
             try {
               await updateStatus.mutateAsync({ goalId: goal.id, status: 'abandoned' });
               router.back();
             } catch (error: any) {
-              Alert.alert('Error', error.message);
+              Alert.alert(t('common.error'), error.message);
             }
           },
         },
@@ -129,7 +140,7 @@ export default function GoalDetailScreen() {
                 },
               ]}
             >
-              {goal.status.charAt(0).toUpperCase() + goal.status.slice(1)}
+              {goal.status === 'active' ? t('goals.active') : goal.status === 'achieved' ? t('goals.achieved') : t('goals.abandoned')}
             </Text>
           </View>
         </View>
@@ -143,28 +154,28 @@ export default function GoalDetailScreen() {
           {goal.deadline && (
             <View style={styles.infoRow}>
               <Ionicons name="calendar-outline" size={18} color={Colors.textSecondary} />
-              <Text style={styles.infoLabel}>Deadline</Text>
+              <Text style={styles.infoLabel}>{t('goals.deadlineLabel')}</Text>
               <Text style={[styles.infoValue, isOverdue && goal.status === 'active' && { color: Colors.error }]}>
-                {format(new Date(goal.deadline), 'MMMM d, yyyy')}
+                {format(new Date(goal.deadline), 'd MMMM yyyy', { locale: nl })}
                 {goal.status === 'active' && daysLeft !== null && (
                   isOverdue
-                    ? ` (${Math.abs(daysLeft)}d overdue)`
-                    : ` (${daysLeft}d left)`
+                    ? ` (${t('goals.daysOverdue', { days: Math.abs(daysLeft) })})`
+                    : ` (${t('goals.daysLeft', { days: daysLeft })})`
                 )}
               </Text>
             </View>
           )}
           <View style={styles.infoRow}>
             <Ionicons name="time-outline" size={18} color={Colors.textSecondary} />
-            <Text style={styles.infoLabel}>Created</Text>
+            <Text style={styles.infoLabel}>{t('goals.createdAt')}</Text>
             <Text style={styles.infoValue}>
-              {format(new Date(goal.created_at), 'MMMM d, yyyy')}
+              {format(new Date(goal.created_at), 'd MMMM yyyy', { locale: nl })}
             </Text>
           </View>
           {goal.status === 'achieved' && goal.score_improvement != null && (
             <View style={styles.infoRow}>
               <Ionicons name="trending-up" size={18} color={Colors.success} />
-              <Text style={styles.infoLabel}>Improvement</Text>
+              <Text style={styles.infoLabel}>{t('goals.improvement')}</Text>
               <Text style={[styles.infoValue, { color: Colors.success, fontWeight: '700' }]}>
                 +{goal.score_improvement}
               </Text>
@@ -181,7 +192,7 @@ export default function GoalDetailScreen() {
           <Card style={styles.aiCard}>
             <View style={styles.aiHeader}>
               <Ionicons name="sparkles" size={16} color={Colors.accent} />
-              <Text style={styles.aiLabel}>Deco AI Feedback</Text>
+              <Text style={styles.aiLabel}>{t('goals.aiFeedback')}</Text>
             </View>
             <Text style={styles.aiText}>{goal.ai_feedback}</Text>
           </Card>
@@ -189,7 +200,7 @@ export default function GoalDetailScreen() {
 
         {goal.coach_comments && goal.coach_comments.length > 0 && (
           <View style={styles.commentsSection}>
-            <Text style={styles.sectionTitle}>Coach Feedback</Text>
+            <Text style={styles.sectionTitle}>{t('goals.coachFeedback')}</Text>
             {goal.coach_comments.map((comment) => (
               <Card key={comment.id} style={styles.commentCard}>
                 {comment.is_thumbs_up && (
@@ -199,7 +210,7 @@ export default function GoalDetailScreen() {
                   <Text style={styles.commentText}>{comment.content}</Text>
                 )}
                 <Text style={styles.commentDate}>
-                  {format(new Date(comment.created_at), 'MMM d, yyyy')}
+                  {format(new Date(comment.created_at), 'd MMM yyyy', { locale: nl })}
                 </Text>
               </Card>
             ))}
@@ -209,13 +220,13 @@ export default function GoalDetailScreen() {
         {goal.status === 'active' && (
           <View style={styles.actions}>
             <Button
-              title="Goal Achieved"
+              title={t('goals.markAchieved')}
               onPress={() => setShowCompleteModal(true)}
               size="lg"
               style={styles.achieveButton}
             />
             <TouchableOpacity onPress={handleAbandon} style={styles.abandonLink}>
-              <Text style={styles.abandonText}>Abandon goal</Text>
+              <Text style={styles.abandonText}>{t('goals.abandon')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -229,10 +240,22 @@ export default function GoalDetailScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Well done!</Text>
+            <Text style={styles.modalTitle}>{t('goals.wellDone')}</Text>
             <Text style={styles.modalSubtitle}>
-              How much did your {skillLabel?.label?.toLowerCase() ?? 'skill'} improve?
+              {t('goals.howMuchImproved', { skill: skillLabel?.label?.toLowerCase() ?? 'skill' })}
             </Text>
+
+            {currentScore !== null && (
+              <View style={styles.currentScoreRow}>
+                <Text style={styles.currentScoreLabel}>{t('goals.currentScore')}</Text>
+                <Text style={styles.currentScoreValue}>{currentScore}/10</Text>
+                {selectedImprovement > 0 && (
+                  <Text style={styles.newScoreValue}>
+                    → {Math.min(10, currentScore + selectedImprovement)}/10
+                  </Text>
+                )}
+              </View>
+            )}
 
             <View style={styles.improvementGrid}>
               {IMPROVEMENT_OPTIONS.map((val) => {
@@ -252,7 +275,7 @@ export default function GoalDetailScreen() {
                         isSelected && styles.improvementTextActive,
                       ]}
                     >
-                      {val === 0 ? 'No change' : `+${val}`}
+                      {val === 0 ? t('goals.noChange') : `+${val}`}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -260,7 +283,7 @@ export default function GoalDetailScreen() {
             </View>
 
             <Button
-              title={updateStatus.isPending ? 'Saving...' : 'Complete Goal'}
+              title={updateStatus.isPending ? t('goals.saving') : t('goals.completeGoal')}
               onPress={handleAchieve}
               loading={updateStatus.isPending}
               size="lg"
@@ -269,11 +292,20 @@ export default function GoalDetailScreen() {
               onPress={() => setShowCompleteModal(false)}
               style={styles.cancelLink}
             >
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
+      <Celebration
+        visible={showCelebration}
+        message={t('goals.celebrationAchieved')}
+        onDismiss={() => {
+          setShowCelebration(false);
+          router.replace('/(athlete)/profile');
+        }}
+      />
     </>
   );
 }
@@ -476,5 +508,30 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: FontSize.md,
     color: Colors.textSecondary,
+  },
+  currentScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.surfaceSecondary,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  currentScoreLabel: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+  },
+  currentScoreValue: {
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  newScoreValue: {
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    color: Colors.success,
   },
 });

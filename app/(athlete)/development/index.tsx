@@ -9,25 +9,29 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useReflections } from '../../../src/hooks/useReflections';
-import { useGoals } from '../../../src/hooks/useGoals';
+import { useGoals, useCoachFeedback } from '../../../src/hooks/useGoals';
 import { useUpcomingSessions } from '../../../src/hooks/useSchedule';
 import { useSkillScoreHistory } from '../../../src/hooks/useSkills';
 import { Card } from '../../../src/components/ui/Card';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
 import { format } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
-const SESSION_TYPE_CONFIG = {
-  training: { icon: 'barbell-outline' as const, color: Colors.primary, label: 'Training' },
-  match: { icon: 'trophy-outline' as const, color: Colors.accent, label: 'Match' },
-  gym: { icon: 'fitness-outline' as const, color: Colors.success, label: 'Gym' },
-  other: { icon: 'ellipsis-horizontal-outline' as const, color: Colors.textSecondary, label: 'Other' },
+const SESSION_TYPE_ICONS = {
+  training: { icon: 'barbell-outline' as const, color: Colors.primary },
+  match: { icon: 'trophy-outline' as const, color: Colors.accent },
+  gym: { icon: 'fitness-outline' as const, color: Colors.success },
+  other: { icon: 'ellipsis-horizontal-outline' as const, color: Colors.textSecondary },
 };
 
 export default function DevelopmentScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: reflections, isLoading: loadingReflections } = useReflections();
   const { data: goals } = useGoals(undefined, 'active');
+  const { data: coachFeedback } = useCoachFeedback();
   const { data: upcomingSessions } = useUpcomingSessions(14);
   const { data: skillHistory } = useSkillScoreHistory();
 
@@ -71,15 +75,15 @@ export default function DevelopmentScreen() {
         <View style={styles.statsRow}>
           <Card style={styles.statCard} padding={Spacing.md}>
             <Text style={styles.statNumber}>{reflectionCount}</Text>
-            <Text style={styles.statLabel}>Reflections</Text>
+            <Text style={styles.statLabel}>{t('development.reflections')}</Text>
           </Card>
           <Card style={styles.statCard} padding={Spacing.md}>
             <Text style={styles.statNumber}>{streak}</Text>
-            <Text style={styles.statLabel}>Day Streak</Text>
+            <Text style={styles.statLabel}>{t('development.streak')}</Text>
           </Card>
           <Card style={styles.statCard} padding={Spacing.md}>
             <Text style={[styles.statNumber, { color: Colors.success }]}>{assessmentCount}</Text>
-            <Text style={styles.statLabel}>Assessments</Text>
+            <Text style={styles.statLabel}>{t('development.assessments')}</Text>
           </Card>
         </View>
 
@@ -87,10 +91,11 @@ export default function DevelopmentScreen() {
         {upcomingSessions && upcomingSessions.length > 0 && (
           <>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Upcoming Sessions</Text>
+              <Text style={styles.sectionTitle}>{t('development.upcomingSessions')}</Text>
             </View>
             {upcomingSessions.slice(0, 5).map((session) => {
-              const config = SESSION_TYPE_CONFIG[session.session_type] ?? SESSION_TYPE_CONFIG.other;
+              const config = SESSION_TYPE_ICONS[session.session_type] ?? SESSION_TYPE_ICONS.other;
+              const sessionLabel = t(`common.${session.session_type}`, session.session_type);
               const isPast = new Date(session.date) < new Date();
               const hasReflection = !!session.reflection_id;
 
@@ -102,10 +107,10 @@ export default function DevelopmentScreen() {
                     </View>
                     <View style={styles.sessionInfo}>
                       <Text style={styles.sessionLabel}>
-                        {session.label ?? config.label}
+                        {session.label ?? sessionLabel}
                       </Text>
                       <Text style={styles.sessionTime}>
-                        {format(new Date(session.date), 'EEE, MMM d')} · {session.start_time.slice(0, 5)}
+                        {format(new Date(session.date), 'EEE d MMM', { locale: nl })} · {session.start_time.slice(0, 5)}
                       </Text>
                     </View>
                     {isPast && !hasReflection && (
@@ -113,7 +118,7 @@ export default function DevelopmentScreen() {
                         style={styles.reflectButton}
                         onPress={() => router.push('/(athlete)/development/reflect')}
                       >
-                        <Text style={styles.reflectButtonText}>Reflect</Text>
+                        <Text style={styles.reflectButtonText}>{t('development.reflect')}</Text>
                       </TouchableOpacity>
                     )}
                     {hasReflection && (
@@ -131,18 +136,42 @@ export default function DevelopmentScreen() {
           <Card style={styles.evolutionCard}>
             <View style={styles.cardHeader}>
               <Ionicons name="trending-up" size={20} color={Colors.primary} />
-              <Text style={styles.cardTitle}>Profile Evolution</Text>
+              <Text style={styles.cardTitle}>{t('development.profileEvolution')}</Text>
             </View>
             <Text style={styles.evolutionText}>
-              You've assessed yourself {assessmentCount} times. Keep
-              reassessing to track your growth!
+              {t('development.evolutionText', { count: assessmentCount })}
             </Text>
           </Card>
         )}
 
-        {/* Recent reflections */}
+        {/* Coach feedback */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Reflections</Text>
+          <Text style={styles.sectionTitle}>{t('development.coachFeedback')}</Text>
+        </View>
+        {coachFeedback && coachFeedback.length > 0 ? (
+          coachFeedback.slice(0, 10).map((comment) => (
+            <Card key={comment.id} style={styles.feedbackCard}>
+              <View style={styles.feedbackHeader}>
+                <Text style={styles.feedbackGoalTitle} numberOfLines={1}>
+                  {comment.goal_title}
+                </Text>
+                <Text style={styles.feedbackDate}>
+                  {format(new Date(comment.created_at), 'd MMM', { locale: nl })}
+                </Text>
+              </View>
+              <Text style={styles.feedbackContent}>{comment.content}</Text>
+            </Card>
+          ))
+        ) : (
+          <View style={styles.empty}>
+            <Ionicons name="chatbubble-outline" size={40} color={Colors.textTertiary} />
+            <Text style={styles.emptyText}>{t('development.noCoachFeedback')}</Text>
+          </View>
+        )}
+
+        {/* Recent reflections */}
+        <View style={[styles.sectionHeader, { marginTop: Spacing.lg }]}>
+          <Text style={styles.sectionTitle}>{t('development.recentReflections')}</Text>
         </View>
 
         {loadingReflections ? (
@@ -162,11 +191,11 @@ export default function DevelopmentScreen() {
                     color={Colors.primary}
                   />
                   <Text style={styles.sessionTypeText}>
-                    {reflection.session_type === 'training' ? 'Training' : 'Match'}
+                    {reflection.session_type === 'training' ? t('common.training') : t('common.match')}
                   </Text>
                 </View>
                 <Text style={styles.reflectionDate}>
-                  {format(new Date(reflection.created_at), 'MMM d, yyyy')}
+                  {format(new Date(reflection.created_at), 'd MMM yyyy', { locale: nl })}
                 </Text>
               </View>
               {reflection.notes && (
@@ -184,7 +213,7 @@ export default function DevelopmentScreen() {
               color={Colors.textTertiary}
             />
             <Text style={styles.emptyText}>
-              No reflections yet. Reflect after your next session!
+              {t('development.noReflections')}
             </Text>
           </View>
         )}
@@ -297,6 +326,32 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   evolutionText: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  feedbackCard: {
+    marginBottom: Spacing.sm,
+    padding: Spacing.md,
+  },
+  feedbackHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  feedbackGoalTitle: {
+    flex: 1,
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.primary,
+    marginRight: Spacing.sm,
+  },
+  feedbackDate: {
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+  },
+  feedbackContent: {
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
     lineHeight: 20,

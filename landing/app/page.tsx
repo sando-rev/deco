@@ -33,12 +33,12 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-deco-text tracking-tight mb-4">
-              Everything you need to grow
+              Alles wat je nodig hebt om te groeien
             </h2>
             <p className="text-base text-deco-text-secondary max-w-lg mx-auto mb-8">
               {role === "athlete"
-                ? "Track your skills, set smart goals, and reflect after every session. Deco keeps your development on track."
-                : "Stay connected to every player's journey. Track goals, give feedback, and manage your team's growth."}
+                ? "Volg je vaardigheden, stel slimme doelen en reflecteer na elke sessie. Deco houdt jouw ontwikkeling op koers."
+                : "Blijf verbonden met het traject van elke speler. Volg doelen, geef feedback en begeleid de groei van je team."}
             </p>
             <RoleToggle activeRole={role} onRoleChange={setRole} />
           </div>
@@ -51,12 +51,12 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-deco-text tracking-tight mb-4">
-              See it in action
+              Bekijk het in actie
             </h2>
             <p className="text-base text-deco-text-secondary max-w-lg mx-auto">
               {role === "athlete"
-                ? "Your development journey, visualized. From self-assessment to goal tracking to session reflections."
-                : "Your team's development at your fingertips. From player profiles to goal feedback."}
+                ? "Jouw ontwikkeltraject, visueel gemaakt. Van zelfevaluatie tot doeltracking en sessiereflecties."
+                : "De ontwikkeling van je team binnen handbereik. Van spelersprofielen tot doeloverzicht en feedback."}
             </p>
           </div>
           <ScreenshotGallery activeRole={role} />

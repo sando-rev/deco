@@ -8,9 +8,9 @@ const ATHLETE_FEATURES = [
         <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
       </svg>
     ),
-    title: "Skill Self-Assessment",
+    title: "Vaardigheidsbeoordeling",
     description:
-      "Rate yourself across 8 core field hockey attributes and see your strengths visualized in a radar chart.",
+      "Beoordeel jezelf op 8 kernattributen van hockey en zie je sterke punten visualiseren in een radargrafiek.",
   },
   {
     icon: (
@@ -18,9 +18,9 @@ const ATHLETE_FEATURES = [
         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
       </svg>
     ),
-    title: "Smart Goal Setting",
+    title: "Slim doelen stellen",
     description:
-      "Set targeted development goals. Our AI analyzes each goal and gives you feedback on how to make it more actionable.",
+      "Stel gerichte ontwikkeldoelen in. Onze AI analyseert elk doel en geeft je feedback om het concreter en uitvoerbaarder te maken.",
   },
   {
     icon: (
@@ -28,9 +28,9 @@ const ATHLETE_FEATURES = [
         <path d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5m-1.414-9.414a2 2 0 1 1 2.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
       </svg>
     ),
-    title: "Session Reflections",
+    title: "Sessiereflecties",
     description:
-      "After every training or match, reflect on your goals. Rate your progress and write what you learned.",
+      "Reflecteer na elke training of wedstrijd op je doelen. Beoordeel je voortgang en schrijf op wat je hebt geleerd.",
   },
   {
     icon: (
@@ -38,9 +38,9 @@ const ATHLETE_FEATURES = [
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
       </svg>
     ),
-    title: "Development Tracking",
+    title: "Ontwikkeling volgen",
     description:
-      "Watch your skill profile evolve over time. See trends, streaks, and progress charts for every goal.",
+      "Zie je vaardigheidsprofiel in de loop van de tijd evolueren. Bekijk trends, reeksen en voortgangsgrafieken per doel.",
   },
   {
     icon: (
@@ -48,9 +48,9 @@ const ATHLETE_FEATURES = [
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
       </svg>
     ),
-    title: "Smart Reminders",
+    title: "Slimme herinneringen",
     description:
-      "Get nudged before training to review your goals, and after sessions to reflect. Never lose focus.",
+      "Ontvang een herinnering voor de training om je doelen te bekijken, en na de sessie om te reflecteren. Verlies nooit je focus.",
   },
   {
     icon: (
@@ -61,7 +61,7 @@ const ATHLETE_FEATURES = [
     ),
     title: "AI Coaching Feedback",
     description:
-      "Deco AI reviews your goals and reflections, providing personalized tips to accelerate your growth.",
+      "Deco AI beoordeelt je doelen en reflecties en geeft gepersonaliseerde tips om je groei te versnellen.",
   },
 ];
 
@@ -74,9 +74,9 @@ const COACH_FEATURES = [
         <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
       </svg>
     ),
-    title: "Team Management",
+    title: "Teambeheer",
     description:
-      "Create your team and invite players with a simple code. Onboard your entire squad in minutes.",
+      "Maak je team aan en nodig spelers uit met een eenvoudige code. Voeg je volledige selectie in minuten toe.",
   },
   {
     icon: (
@@ -85,9 +85,9 @@ const COACH_FEATURES = [
         <path d="M3 9h18M9 3v18" />
       </svg>
     ),
-    title: "Player Profiles",
+    title: "Spelersprofielen",
     description:
-      "See every player's skill radar chart at a glance. Understand strengths and areas for development instantly.",
+      "Bekijk de radargrafiek van elke speler in één oogopslag. Begrijp direct de sterke punten en verbeterpunten.",
   },
   {
     icon: (
@@ -96,9 +96,9 @@ const COACH_FEATURES = [
         <path d="M12 8v4l3 3" />
       </svg>
     ),
-    title: "Goal Oversight",
+    title: "Doeloverzicht",
     description:
-      "View and track each player's active development goals. Know exactly what everyone is working on.",
+      "Bekijk en volg de actieve ontwikkeldoelen van elke speler. Weet precies waar iedereen aan werkt.",
   },
   {
     icon: (
@@ -107,9 +107,9 @@ const COACH_FEATURES = [
         <path d="M1 12h4" />
       </svg>
     ),
-    title: "Feedback & Endorsement",
+    title: "Feedback & Aanmoediging",
     description:
-      "Give thumbs-up or write comments on player goals. Small gestures of encouragement go a long way.",
+      "Geef een duimpje omhoog of schrijf een reactie op spelerdoelen. Kleine aanmoedigingen maken een groot verschil.",
   },
   {
     icon: (
@@ -117,9 +117,9 @@ const COACH_FEATURES = [
         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
       </svg>
     ),
-    title: "Activity Monitoring",
+    title: "Activiteitenmonitoring",
     description:
-      "See which players are actively reflecting and growing. Spot disengagement early and intervene.",
+      "Zie welke spelers actief reflecteren en groeien. Signaleer afhaken vroegtijdig en grijp in.",
   },
   {
     icon: (
@@ -130,9 +130,9 @@ const COACH_FEATURES = [
         <line x1="3" y1="10" x2="21" y2="10" />
       </svg>
     ),
-    title: "Weekly Check-ins",
+    title: "Wekelijkse check-ins",
     description:
-      "Get reminded each week to review your team's development. Stay proactive, not reactive.",
+      "Ontvang elke week een herinnering om de ontwikkeling van je team te bekijken. Blijf proactief, niet reactief.",
   },
 ];
 

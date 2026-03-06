@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useSelectedSkills, useLatestSkillScores, useSkillDefinitions } from '../../../src/hooks/useSkills';
 import { useGoals } from '../../../src/hooks/useGoals';
 import { useReflections } from '../../../src/hooks/useReflections';
@@ -19,13 +20,16 @@ import { RadarChart, RadarSkill } from '../../../src/components/RadarChart';
 import { GoalCard } from '../../../src/components/GoalCard';
 import { Card } from '../../../src/components/ui/Card';
 import { Button } from '../../../src/components/ui/Button';
+import { SKILL_CATEGORIES } from '../../../src/constants/skills';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
 import { supabase } from '../../../src/services/supabase';
 import { Profile } from '../../../src/types/database';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
 export default function PlayerDetailScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const athleteId = id as string;
 
@@ -58,7 +62,7 @@ export default function PlayerDetailScreen() {
     try {
       await addComment.mutateAsync({ goalId, isThumbsUp: true });
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert(t('common.error'), error.message);
     }
   };
 
@@ -69,7 +73,7 @@ export default function PlayerDetailScreen() {
       setCommentText('');
       setCommentGoalId(null);
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert(t('common.error'), error.message);
     }
   };
 
@@ -109,17 +113,45 @@ export default function PlayerDetailScreen() {
 
       {/* Radar chart */}
       <Card style={styles.chartCard}>
-        <Text style={styles.sectionTitle}>Performance Profile</Text>
+        <Text style={styles.sectionTitle}>{t('coach.performanceProfile')}</Text>
         {radarSkills.length >= 3 ? (
           <RadarChart skills={radarSkills} size={280} />
         ) : (
-          <Text style={styles.noSkillsText}>This athlete hasn't set up their profile yet</Text>
+          <Text style={styles.noSkillsText}>{t('coach.profileNotSet')}</Text>
         )}
       </Card>
 
+      {/* Skill scores grid */}
+      {selectedSkills && selectedSkills.length > 0 && (
+        <View style={styles.scoresSection}>
+          <Text style={styles.sectionTitle}>{t('coach.skills')}</Text>
+          {SKILL_CATEGORIES.map((cat) => {
+            const catSkills = (selectedSkills ?? []).filter((s) => s.category === cat.key);
+            if (catSkills.length === 0) return null;
+            return (
+              <View key={cat.key} style={styles.categoryBlock}>
+                <Text style={styles.categoryLabel}>{cat.label}</Text>
+                {catSkills.map((skill) => {
+                  const score = scoreMap.get(skill.id) ?? 5;
+                  return (
+                    <View key={skill.id} style={styles.skillRow}>
+                      <Text style={styles.skillLabel} numberOfLines={1}>{skill.label}</Text>
+                      <View style={styles.scoreBarBg}>
+                        <View style={[styles.scoreBarFill, { width: `${score * 10}%` }]} />
+                      </View>
+                      <Text style={styles.scoreText}>{score}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })}
+        </View>
+      )}
+
       {/* Active goals */}
       <Text style={styles.sectionTitle}>
-        Active Goals ({activeGoals?.length ?? 0})
+        {t('coach.activeGoalsCount', { count: activeGoals?.length ?? 0 })}
       </Text>
       {activeGoals && activeGoals.length > 0 ? (
         activeGoals.map((goal) => (
@@ -131,47 +163,41 @@ export default function PlayerDetailScreen() {
                 onPress={() => handleThumbsUp(goal.id)}
               >
                 <Ionicons name="thumbs-up-outline" size={18} color={Colors.primary} />
-                <Text style={styles.actionText}>Encourage</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.commentButton}
-                onPress={() =>
-                  setCommentGoalId(commentGoalId === goal.id ? null : goal.id)
-                }
-              >
-                <Ionicons name="chatbubble-outline" size={18} color={Colors.primary} />
-                <Text style={styles.actionText}>Comment</Text>
+                <Text style={styles.actionText}>{t('coach.encourage')}</Text>
               </TouchableOpacity>
             </View>
-            {commentGoalId === goal.id && (
-              <View style={styles.commentInput}>
-                <TextInput
-                  style={styles.commentField}
-                  placeholder="Write feedback..."
-                  placeholderTextColor={Colors.textTertiary}
-                  value={commentText}
-                  onChangeText={setCommentText}
-                  multiline
-                />
-                <Button
-                  title="Send"
-                  onPress={() => handleComment(goal.id)}
-                  loading={addComment.isPending}
-                  size="sm"
-                />
-              </View>
-            )}
+            <View style={styles.commentInput}>
+              <TextInput
+                style={styles.commentField}
+                placeholder={t('coach.writeFeedback')}
+                placeholderTextColor={Colors.textTertiary}
+                value={commentGoalId === goal.id ? commentText : ''}
+                onChangeText={(text) => {
+                  setCommentGoalId(goal.id);
+                  setCommentText(text);
+                }}
+                onFocus={() => setCommentGoalId(goal.id)}
+                multiline
+              />
+              <Button
+                title={t('common.send')}
+                onPress={() => handleComment(goal.id)}
+                loading={addComment.isPending}
+                size="sm"
+                disabled={commentGoalId !== goal.id || !commentText.trim()}
+              />
+            </View>
           </View>
         ))
       ) : (
-        <Text style={styles.emptyText}>No active goals</Text>
+        <Text style={styles.emptyText}>{t('goals.noActiveGoals')}</Text>
       )}
 
       {/* Achieved goals */}
       {achievedGoals && achievedGoals.length > 0 && (
         <>
           <Text style={[styles.sectionTitle, { marginTop: Spacing.lg }]}>
-            Achieved Goals ({achievedGoals.length})
+            {t('coach.achievedGoalsCount', { count: achievedGoals.length })}
           </Text>
           {achievedGoals.map((goal) => (
             <GoalCard key={goal.id} goal={goal} skillDefinitions={skillDefs} />
@@ -181,7 +207,7 @@ export default function PlayerDetailScreen() {
 
       {/* Recent reflections summary */}
       <Text style={[styles.sectionTitle, { marginTop: Spacing.lg }]}>
-        Recent Activity
+        {t('coach.recentActivity')}
       </Text>
       {reflections && reflections.length > 0 ? (
         reflections.slice(0, 5).map((r) => (
@@ -193,10 +219,10 @@ export default function PlayerDetailScreen() {
                 color={Colors.primary}
               />
               <Text style={styles.reflectionType}>
-                {r.session_type === 'training' ? 'Training' : 'Match'}
+                {r.session_type === 'training' ? t('common.training') : t('common.match')}
               </Text>
               <Text style={styles.reflectionDate}>
-                {format(new Date(r.created_at), 'MMM d')}
+                {format(new Date(r.created_at), 'd MMM', { locale: nl })}
               </Text>
             </View>
             {r.notes && (
@@ -207,7 +233,7 @@ export default function PlayerDetailScreen() {
           </Card>
         ))
       ) : (
-        <Text style={styles.emptyText}>No reflections yet</Text>
+        <Text style={styles.emptyText}>{t('coach.noReflections')}</Text>
       )}
     </ScrollView>
   );
@@ -266,6 +292,50 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
     marginBottom: Spacing.md,
+  },
+  scoresSection: {
+    marginBottom: Spacing.lg,
+  },
+  categoryBlock: {
+    marginBottom: Spacing.md,
+  },
+  categoryLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.xs,
+  },
+  skillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: 6,
+  },
+  skillLabel: {
+    fontSize: FontSize.sm,
+    color: Colors.text,
+    width: 120,
+  },
+  scoreBarBg: {
+    flex: 1,
+    height: 8,
+    backgroundColor: Colors.border,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  scoreBarFill: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: 4,
+  },
+  scoreText: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.text,
+    width: 24,
+    textAlign: 'right',
   },
   coachActions: {
     flexDirection: 'row',

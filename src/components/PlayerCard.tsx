@@ -5,6 +5,7 @@ import { TeamMemberWithProfile } from '../types/database';
 import { Colors, Spacing, FontSize, BorderRadius } from '../constants/theme';
 import { Card } from './ui/Card';
 import { formatDistanceToNow } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
 interface PlayerCardProps {
   member: TeamMemberWithProfile;
@@ -21,8 +22,8 @@ export function PlayerCard({ member, onPress }: PlayerCardProps) {
     .slice(0, 2);
 
   const lastActive = last_reflection_date
-    ? formatDistanceToNow(new Date(last_reflection_date), { addSuffix: true })
-    : 'No reflections yet';
+    ? formatDistanceToNow(new Date(last_reflection_date), { addSuffix: true, locale: nl })
+    : 'Nog geen reflecties';
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>

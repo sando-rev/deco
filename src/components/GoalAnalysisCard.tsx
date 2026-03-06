@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { GoalAiAnalysis } from '../types/database';
 import { Colors, Spacing, FontSize, BorderRadius } from '../constants/theme';
 import { Card } from './ui/Card';
@@ -40,26 +41,28 @@ function ScoreBar({ label, score, icon }: { label: string; score: number; icon: 
 }
 
 export function GoalAnalysisCard({ analysis }: GoalAnalysisCardProps) {
+  const { t } = useTranslation();
+
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
         <Ionicons name="sparkles" size={16} color={Colors.accent} />
-        <Text style={styles.headerText}>AI Goal Analysis</Text>
+        <Text style={styles.headerText}>{t('ai.goalAnalysis')}</Text>
       </View>
 
       <View style={styles.scores}>
         <ScoreBar
-          label="Specificity"
+          label={t('ai.specificity')}
           score={analysis.specificity_score}
           icon="target-outline"
         />
         <ScoreBar
-          label="Measurability"
+          label={t('ai.measurability')}
           score={analysis.measurability_score}
           icon="analytics-outline"
         />
         <ScoreBar
-          label="Challenge Level"
+          label={t('ai.challengeLevel')}
           score={analysis.challenge_score}
           icon="trending-up-outline"
         />
@@ -69,7 +72,7 @@ export function GoalAnalysisCard({ analysis }: GoalAnalysisCardProps) {
 
       {analysis.suggestions.length > 0 && (
         <View style={styles.suggestions}>
-          <Text style={styles.suggestionsTitle}>Suggestions:</Text>
+          <Text style={styles.suggestionsTitle}>{t('ai.suggestions')}</Text>
           {analysis.suggestions.map((suggestion, i) => (
             <View key={i} style={styles.suggestionRow}>
               <Ionicons name="bulb-outline" size={14} color={Colors.accent} />

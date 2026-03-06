@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Goal, SkillDefinition } from '../types/database';
 import { Colors, Spacing, FontSize, BorderRadius } from '../constants/theme';
 import { Card } from './ui/Card';
 import { format, differenceInDays } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
 interface GoalCardProps {
   goal: Goal;
@@ -15,6 +17,7 @@ interface GoalCardProps {
 }
 
 export function GoalCard({ goal, onPress, showAiFeedback = false, coachView = false, skillDefinitions }: GoalCardProps) {
+  const { t } = useTranslation();
   // Look up skill label from definitions, fall back to attribute
   const skillLabel = (() => {
     if (goal.skill_id && skillDefinitions) {
@@ -33,9 +36,9 @@ export function GoalCard({ goal, onPress, showAiFeedback = false, coachView = fa
   const isOverdue = daysLeft !== null && daysLeft < 0;
 
   const statusConfig = {
-    active: { color: Colors.primary, label: 'Active', icon: 'radio-button-on' as const },
-    achieved: { color: Colors.success, label: 'Achieved', icon: 'checkmark-circle' as const },
-    abandoned: { color: Colors.textTertiary, label: 'Abandoned', icon: 'close-circle' as const },
+    active: { color: Colors.primary, label: t('goals.active'), icon: 'radio-button-on' as const },
+    achieved: { color: Colors.success, label: t('goals.achieved'), icon: 'checkmark-circle' as const },
+    abandoned: { color: Colors.textTertiary, label: t('goals.abandoned'), icon: 'close-circle' as const },
   };
 
   const status = statusConfig[goal.status];
@@ -67,7 +70,7 @@ export function GoalCard({ goal, onPress, showAiFeedback = false, coachView = fa
             <View style={styles.targetContainer}>
               <Ionicons name="trending-up" size={14} color={Colors.success} />
               <Text style={[styles.footerText, { color: Colors.success, fontWeight: '600' }]}>
-                +{goal.score_improvement} improvement
+                +{goal.score_improvement} {t('goals.improvement').toLowerCase()}
               </Text>
             </View>
           ) : skillLabel ? (
@@ -93,9 +96,9 @@ export function GoalCard({ goal, onPress, showAiFeedback = false, coachView = fa
               >
                 {goal.status === 'active'
                   ? isOverdue
-                    ? `${Math.abs(daysLeft)}d overdue`
-                    : `${daysLeft}d left`
-                  : format(new Date(goal.deadline!), 'MMM d')}
+                    ? t('goals.daysOverdue', { days: Math.abs(daysLeft) })
+                    : t('goals.daysLeft', { days: daysLeft })
+                  : format(new Date(goal.deadline!), 'd MMM', { locale: nl })}
               </Text>
             </View>
           )}
@@ -105,7 +108,7 @@ export function GoalCard({ goal, onPress, showAiFeedback = false, coachView = fa
           <View style={styles.aiFeedback}>
             <View style={styles.aiHeader}>
               <Ionicons name="sparkles" size={14} color={Colors.accent} />
-              <Text style={styles.aiLabel}>Deco AI Feedback</Text>
+              <Text style={styles.aiLabel}>{t('goals.aiFeedback')}</Text>
             </View>
             <Text style={styles.aiText}>{goal.ai_feedback}</Text>
           </View>

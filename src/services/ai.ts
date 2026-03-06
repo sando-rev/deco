@@ -1,8 +1,10 @@
 import { supabase } from './supabase';
+import i18n from '../i18n';
 
 interface GoalFeedbackInput {
   description: string;
   athlete_skills: string[]; // skill labels for context
+  skill_label?: string; // selected skill label for focused feedback
 }
 
 export interface GoalFeedbackResponse {
@@ -18,7 +20,7 @@ export async function getGoalFeedback(
   input: GoalFeedbackInput
 ): Promise<GoalFeedbackResponse> {
   const { data, error } = await supabase.functions.invoke('goal-feedback', {
-    body: input,
+    body: { ...input, language: i18n.language as 'nl' | 'en' },
   });
 
   if (error) {
@@ -27,7 +29,9 @@ export async function getGoalFeedback(
       specificity_score: 5,
       measurability_score: 5,
       challenge_score: 5,
-      feedback: 'Unable to generate feedback right now. Your goal has been saved.',
+      feedback: i18n.language === 'en'
+        ? 'Feedback cannot be generated at this time. Your goal has been saved.'
+        : 'Feedback kan op dit moment niet gegenereerd worden. Je doel is opgeslagen.',
       suggestions: [],
       detected_skills: [],
     };

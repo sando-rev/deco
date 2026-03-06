@@ -20,7 +20,7 @@ export function RoleToggle({ activeRole, onRoleChange }: RoleToggleProps) {
           activeRole === "athlete" ? "text-white" : "text-deco-text-secondary"
         }`}
       >
-        For Athletes
+        Voor spelers
       </button>
       <button
         onClick={() => onRoleChange("coach")}
@@ -28,7 +28,7 @@ export function RoleToggle({ activeRole, onRoleChange }: RoleToggleProps) {
           activeRole === "coach" ? "text-white" : "text-deco-text-secondary"
         }`}
       >
-        For Coaches
+        Voor coaches
       </button>
     </div>
   );

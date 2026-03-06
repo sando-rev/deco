@@ -2,10 +2,10 @@ export function HowItWorks() {
   const steps = [
     {
       num: 1,
-      title: "Assess",
-      subtitle: "Know where you stand",
+      title: "Beoordeel",
+      subtitle: "Weet waar je staat",
       description:
-        "Rate yourself on 8 field hockey skills — dribbling, passing, shooting, defending, fitness, game insight, communication, and mental strength. Your radar chart reveals your unique profile.",
+        "Beoordeel jezelf op 8 hockeyvaardigheden — dribbelen, passen, schieten, verdedigen, conditie, spelinzicht, communicatie en mentale kracht. Jouw radargrafiek laat je unieke profiel zien.",
       icon: (
         <svg
           className="w-8 h-8"
@@ -22,10 +22,10 @@ export function HowItWorks() {
     },
     {
       num: 2,
-      title: "Set Goals",
-      subtitle: "Pick your focus areas",
+      title: "Stel doelen",
+      subtitle: "Kies je aandachtspunten",
       description:
-        "Choose 2-3 attributes to develop. Set SMART goals and get instant AI feedback on how to make them more specific and achievable.",
+        "Kies 2-3 attributen om te ontwikkelen. Stel SMART-doelen in en ontvang direct AI-feedback om ze specifieker en haalbaar te maken.",
       icon: (
         <svg
           className="w-8 h-8"
@@ -42,10 +42,10 @@ export function HowItWorks() {
     },
     {
       num: 3,
-      title: "Reflect & Grow",
-      subtitle: "Make every session count",
+      title: "Reflecteer & Groei",
+      subtitle: "Laat elke sessie tellen",
       description:
-        "After training or a match, take 2 minutes to rate your goal progress and write what you learned. Over time, watch your skills evolve.",
+        "Neem na een training of wedstrijd 2 minuten om je voortgang te beoordelen en op te schrijven wat je hebt geleerd. Zie je vaardigheden in de loop van de tijd evolueren.",
       icon: (
         <svg
           className="w-8 h-8"
@@ -65,10 +65,10 @@ export function HowItWorks() {
       <div className="max-w-6xl mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-deco-text tracking-tight mb-4">
-            How it works
+            Hoe het werkt
           </h2>
           <p className="text-base text-deco-text-secondary max-w-lg mx-auto">
-            Three simple steps to transform how you approach your development.
+            Drie eenvoudige stappen om te veranderen hoe je je ontwikkeling aanpakt.
           </p>
         </div>
 

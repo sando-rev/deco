@@ -8,17 +8,23 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button } from '../../../src/components/ui/Button';
 import { GoalAnalysisCard } from '../../../src/components/GoalAnalysisCard';
 import { useCreateGoal, useGetGoalFeedback } from '../../../src/hooks/useGoals';
 import { useSelectedSkills } from '../../../src/hooks/useSkills';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
-import { GoalAiAnalysis } from '../../../src/types/database';
+import { GoalAiAnalysis, SkillDefinition } from '../../../src/types/database';
+import { format, addWeeks } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
 export default function NewGoalScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const createGoal = useCreateGoal();
   const getFeedback = useGetGoalFeedback();
@@ -27,12 +33,15 @@ export default function NewGoalScreen() {
   const [goalText, setGoalText] = useState('');
   const [analysis, setAnalysis] = useState<GoalAiAnalysis | null>(null);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState<SkillDefinition | null>(null);
+  const [deadline, setDeadline] = useState<Date>(addWeeks(new Date(), 4));
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const skillLabels = (selectedSkills ?? []).map((s) => s.label);
 
   const handleAnalyze = async () => {
     if (!goalText.trim()) {
-      Alert.alert('Error', 'Please describe your development goal');
+      Alert.alert(t('common.error'), t('goals.describeGoal'));
       return;
     }
 
@@ -44,13 +53,13 @@ export default function NewGoalScreen() {
       setAnalysis(result);
       setHasAnalyzed(true);
     } catch (error: any) {
-      Alert.alert('Error', 'Could not analyze your goal. Please try again.');
+      Alert.alert(t('common.error'), t('goals.couldNotAnalyze'));
     }
   };
 
   const handleSave = async () => {
     if (!goalText.trim()) {
-      Alert.alert('Error', 'Please describe your development goal');
+      Alert.alert(t('common.error'), t('goals.describeGoal'));
       return;
     }
 
@@ -58,10 +67,13 @@ export default function NewGoalScreen() {
       await createGoal.mutateAsync({
         description: goalText.trim(),
         athlete_skills: skillLabels,
+        skill_id: selectedSkill?.id,
+        skill_label: selectedSkill?.label,
+        deadline: deadline.toISOString(),
       });
       router.back();
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert(t('common.error'), error.message);
     }
   };
 
@@ -78,17 +90,67 @@ export default function NewGoalScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Ionicons name="flag" size={32} color={Colors.primary} />
-          <Text style={styles.title}>What is your development goal?</Text>
+          <Text style={styles.title}>{t('goals.whatIsYourGoal')}</Text>
           <Text style={styles.subtitle}>
-            Describe your goal as specifically as possible. Include what you want to improve,
-            how you'll measure it, and make it challenging but achievable.
+            {t('goals.goalSubtitle')}
           </Text>
+        </View>
+
+        <View style={styles.skillSection}>
+          <Text style={styles.skillSectionTitle}>{t('goals.chooseSkill')}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.skillChips}
+          >
+            {(selectedSkills ?? []).map((skill) => {
+              const isSelected = selectedSkill?.id === skill.id;
+              return (
+                <TouchableOpacity
+                  key={skill.id}
+                  style={[styles.skillChip, isSelected && styles.skillChipSelected]}
+                  onPress={() => setSelectedSkill(isSelected ? null : skill)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.skillChipText, isSelected && styles.skillChipTextSelected]}>
+                    {skill.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        <View style={styles.deadlineSection}>
+          <Text style={styles.skillSectionTitle}>{t('goals.deadline')}</Text>
+          <TouchableOpacity
+            style={styles.deadlinePicker}
+            onPress={() => setShowDatePicker(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
+            <Text style={styles.deadlineText}>
+              {format(deadline, 'd MMMM yyyy', { locale: nl })}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color={Colors.textTertiary} />
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={deadline}
+              mode="date"
+              minimumDate={new Date()}
+              onChange={(_, date) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (date) setDeadline(date);
+              }}
+            />
+          )}
         </View>
 
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.goalInput}
-            placeholder="e.g., Improve my jab tackle timing so I win 3 out of 5 defensive duels in every match"
+            placeholder={t('goals.goalPlaceholder')}
             placeholderTextColor={Colors.textTertiary}
             value={goalText}
             onChangeText={(text) => {
@@ -104,26 +166,23 @@ export default function NewGoalScreen() {
         </View>
 
         <View style={styles.tips}>
-          <Text style={styles.tipsTitle}>Tips for a great goal:</Text>
+          <Text style={styles.tipsTitle}>{t('goals.tipsTitle')}</Text>
           <View style={styles.tipRow}>
-            <Ionicons name="target-outline" size={14} color={Colors.primary} />
+            <Ionicons name="locate-outline" size={14} color={Colors.primary} />
             <Text style={styles.tipText}>
-              <Text style={styles.tipBold}>Specific</Text> — not "defend better" but "improve
-              jab tackle timing at the top of the circle"
+              <Text style={styles.tipBold}>{t('goals.tipSpecific')}</Text> — {t('goals.tipSpecificDesc')}
             </Text>
           </View>
           <View style={styles.tipRow}>
             <Ionicons name="analytics-outline" size={14} color={Colors.primary} />
             <Text style={styles.tipText}>
-              <Text style={styles.tipBold}>Measurable</Text> — use numbers like "3 successful
-              tackles per half" or "10 total in a match"
+              <Text style={styles.tipBold}>{t('goals.tipMeasurable')}</Text> — {t('goals.tipMeasurableDesc')}
             </Text>
           </View>
           <View style={styles.tipRow}>
             <Ionicons name="trending-up-outline" size={14} color={Colors.primary} />
             <Text style={styles.tipText}>
-              <Text style={styles.tipBold}>Challenging</Text> — push yourself beyond comfort,
-              but keep it realistic
+              <Text style={styles.tipBold}>{t('goals.tipChallenging')}</Text> — {t('goals.tipChallengingDesc')}
             </Text>
           </View>
         </View>
@@ -135,23 +194,24 @@ export default function NewGoalScreen() {
         <View style={styles.actions}>
           {!hasAnalyzed ? (
             <Button
-              title={getFeedback.isPending ? 'Analyzing...' : 'Get AI Feedback'}
+              title={getFeedback.isPending ? t('goals.analyzing') : t('goals.getAiFeedback')}
               onPress={handleAnalyze}
               loading={getFeedback.isPending}
               size="lg"
               icon={<Ionicons name="sparkles" size={18} color={Colors.white} />}
-              disabled={!goalText.trim()}
+              disabled={!goalText.trim() || !selectedSkill}
             />
           ) : (
             <>
               <Button
-                title={createGoal.isPending ? 'Saving...' : 'Save Goal'}
+                title={createGoal.isPending ? t('goals.saving') : t('goals.saveGoal')}
                 onPress={handleSave}
                 loading={createGoal.isPending}
                 size="lg"
+                disabled={!goalText.trim() || !selectedSkill}
               />
               <Button
-                title="Refine Goal"
+                title={t('goals.refineGoal')}
                 onPress={handleRefine}
                 variant="outline"
                 size="lg"
@@ -163,7 +223,7 @@ export default function NewGoalScreen() {
 
         {getFeedback.isPending && (
           <Text style={styles.aiHint}>
-            Deco AI is analyzing your goal...
+            {t('goals.aiAnalyzing')}
           </Text>
         )}
       </ScrollView>
@@ -197,6 +257,61 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  skillSection: {
+    marginBottom: Spacing.lg,
+  },
+  skillSectionTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+  },
+  skillChips: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    paddingBottom: 4,
+  },
+  skillChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full ?? 999,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  skillChipSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + '15',
+  },
+  skillChipText: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  skillChipTextSelected: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  deadlineSection: {
+    marginBottom: Spacing.lg,
+  },
+  deadlinePicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  deadlineText: {
+    flex: 1,
+    fontSize: FontSize.md,
+    color: Colors.text,
+    fontWeight: '500',
   },
   inputContainer: {
     marginBottom: Spacing.lg,

@@ -20,7 +20,7 @@ export function Navbar() {
           href="#download"
           className="bg-deco-primary text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-deco-primary-dark transition-colors"
         >
-          Get the App
+          Download de app
         </a>
       </div>
     </nav>

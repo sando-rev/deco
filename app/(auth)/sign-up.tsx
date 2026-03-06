@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/hooks/useAuth';
 import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
@@ -18,6 +19,7 @@ import { Colors, Spacing, FontSize, BorderRadius } from '../../src/constants/the
 import { Role } from '../../src/types/database';
 
 export default function SignUp() {
+  const { t } = useTranslation();
   const { signUp } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -27,11 +29,11 @@ export default function SignUp() {
 
   const handleSignUp = async () => {
     if (!fullName || !email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('common.error'), t('auth.fillAllFields'));
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert(t('common.error'), t('auth.passwordMinError'));
       return;
     }
 
@@ -40,7 +42,7 @@ export default function SignUp() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Sign Up Failed', error.message);
+      Alert.alert(t('auth.signUpFailed'), error.message);
     }
   };
 
@@ -54,21 +56,21 @@ export default function SignUp() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={styles.logo}>Deco</Text>
-          <Text style={styles.subtitle}>Create your account</Text>
+          <Text style={styles.logo}>{t('auth.appName')}</Text>
+          <Text style={styles.subtitle}>{t('auth.createAccount')}</Text>
         </View>
 
         <View style={styles.form}>
           <Input
-            label="Full Name"
-            placeholder="Your name"
+            label={t('auth.fullName')}
+            placeholder={t('auth.fullNamePlaceholder')}
             value={fullName}
             onChangeText={setFullName}
             autoCapitalize="words"
           />
           <Input
-            label="Email"
-            placeholder="your@email.com"
+            label={t('auth.email')}
+            placeholder={t('auth.emailPlaceholder')}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -76,14 +78,14 @@ export default function SignUp() {
             autoCorrect={false}
           />
           <Input
-            label="Password"
-            placeholder="Min. 6 characters"
+            label={t('auth.password')}
+            placeholder={t('auth.passwordMin')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
 
-          <Text style={styles.roleLabel}>I am a...</Text>
+          <Text style={styles.roleLabel}>{t('auth.iAmA')}</Text>
           <View style={styles.roleContainer}>
             <TouchableOpacity
               style={[styles.roleCard, role === 'athlete' && styles.roleCardActive]}
@@ -101,10 +103,10 @@ export default function SignUp() {
                   role === 'athlete' && styles.roleTitleActive,
                 ]}
               >
-                Athlete
+                {t('auth.player')}
               </Text>
               <Text style={styles.roleDesc}>
-                Track your development and reach your goals
+                {t('auth.playerDesc')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -123,16 +125,16 @@ export default function SignUp() {
                   role === 'coach' && styles.roleTitleActive,
                 ]}
               >
-                Coach
+                {t('auth.coach')}
               </Text>
               <Text style={styles.roleDesc}>
-                Monitor and guide your athletes' growth
+                {t('auth.coachDesc')}
               </Text>
             </TouchableOpacity>
           </View>
 
           <Button
-            title="Create Account"
+            title={t('auth.signUp')}
             onPress={handleSignUp}
             loading={loading}
             size="lg"
@@ -141,9 +143,9 @@ export default function SignUp() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
+          <Text style={styles.footerText}>{t('auth.hasAccount')} </Text>
           <Link href="/(auth)/sign-in" style={styles.link}>
-            Sign In
+            {t('auth.signIn')}
           </Link>
         </View>
       </ScrollView>

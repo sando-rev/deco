@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
-import { SkillDefinition, SkillCategory, AthleteSkillScore, AthleteSkillWithDefinition } from '../types/database';
+import { SkillDefinition, SkillCategory, SkillPositionType, AthleteSkillScore, AthleteSkillWithDefinition, PositionType } from '../types/database';
 import { useAuth } from './useAuth';
 
 export function useSkillDefinitions() {
@@ -16,6 +16,24 @@ export function useSkillDefinitions() {
       return (data as SkillDefinition[]) ?? [];
     },
     staleTime: 1000 * 60 * 60, // 1 hour - rarely changes
+  });
+}
+
+export function useSkillDefinitionsForPosition(position: PositionType | null) {
+  return useQuery({
+    queryKey: ['skill-definitions', position],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('skill_definitions')
+        .select('*')
+        .in('position_type', [position!, 'both'])
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      return (data as SkillDefinition[]) ?? [];
+    },
+    enabled: !!position,
+    staleTime: 1000 * 60 * 60,
   });
 }
 
@@ -149,6 +167,80 @@ export function useSaveSkillScores() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['skill-scores', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['skill-score-history', user?.id] });
+    },
+  });
+}
+
+export function useCreateCustomSkill() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      label: string;
+      description: string;
+      category: SkillCategory;
+      position_type: SkillPositionType;
+    }) => {
+      const key = `custom_${input.label.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_${Date.now()}`;
+
+      const { data, error } = await supabase
+        .from('skill_definitions')
+        .insert({
+          key,
+          label: input.label,
+          description: input.description,
+          category: input.category,
+          position_type: input.position_type,
+          icon: 'add-circle-outline',
+          display_order: 99,
+          created_by_athlete_id: user!.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as SkillDefinition;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['skill-definitions'] });
+    },
+  });
+}
+
+export function useDeleteCustomSkill() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (skillId: string) => {
+      // Remove from selected skills first
+      await supabase
+        .from('athlete_selected_skills')
+        .delete()
+        .eq('skill_id', skillId)
+        .eq('athlete_id', user!.id);
+
+      // Remove scores
+      await supabase
+        .from('athlete_skill_scores')
+        .delete()
+        .eq('skill_id', skillId)
+        .eq('athlete_id', user!.id);
+
+      // Delete the skill definition
+      const { error } = await supabase
+        .from('skill_definitions')
+        .delete()
+        .eq('id', skillId)
+        .eq('created_by_athlete_id', user!.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['skill-definitions'] });
+      queryClient.invalidateQueries({ queryKey: ['selected-skills', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['skill-scores', user?.id] });
     },
   });
 }

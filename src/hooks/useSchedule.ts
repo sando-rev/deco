@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
-import { TrainingSchedule, ScheduledSession, ScheduleSessionType } from '../types/database';
+import { TrainingSchedule, ScheduledSession, ScheduleSessionType, MatchDate } from '../types/database';
 import { useAuth } from './useAuth';
 import { addDays, format, startOfWeek } from 'date-fns';
 
@@ -151,7 +151,7 @@ export function useAddMatch() {
         .insert({
           athlete_id: user!.id,
           session_type: 'match',
-          label: input.label ?? 'Match',
+          label: input.label ?? 'Wedstrijd',
           date: input.date,
           start_time: input.start_time,
           end_time: input.end_time,
@@ -161,6 +161,69 @@ export function useAddMatch() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['upcoming-sessions', user?.id] });
+    },
+  });
+}
+
+export function useMatchDates() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['match-dates', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('match_dates')
+        .select('*')
+        .eq('athlete_id', user!.id)
+        .gte('date', format(new Date(), 'yyyy-MM-dd'))
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+      return (data as MatchDate[]) ?? [];
+    },
+    enabled: !!user?.id,
+  });
+}
+
+export function useSaveMatchDate() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { date: string; start_time?: string; label?: string }) => {
+      const { error } = await supabase
+        .from('match_dates')
+        .insert({
+          athlete_id: user!.id,
+          date: input.date,
+          start_time: input.start_time ?? null,
+          label: input.label ?? null,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['match-dates', user?.id] });
+    },
+  });
+}
+
+export function useDeleteMatchDate() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (matchDateId: string) => {
+      const { error } = await supabase
+        .from('match_dates')
+        .delete()
+        .eq('id', matchDateId)
+        .eq('athlete_id', user!.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['match-dates', user?.id] });
     },
   });
 }
