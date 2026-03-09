@@ -16,8 +16,10 @@ import { useTranslation } from 'react-i18next';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button } from '../../../src/components/ui/Button';
 import { GoalAnalysisCard } from '../../../src/components/GoalAnalysisCard';
+import { XpToast } from '../../../src/components/XpToast';
 import { useCreateGoal, useGetGoalFeedback } from '../../../src/hooks/useGoals';
 import { useSelectedSkills } from '../../../src/hooks/useSkills';
+import { useCheckAchievements, useGoalStats, XP_VALUES, calculateGoalQualityBonus, Achievement } from '../../../src/hooks/useGamification';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
 import { GoalAiAnalysis, SkillDefinition } from '../../../src/types/database';
 import { format, addWeeks } from 'date-fns';
@@ -30,12 +32,18 @@ export default function NewGoalScreen() {
   const getFeedback = useGetGoalFeedback();
   const { data: selectedSkills } = useSelectedSkills();
 
+  const { checkAndAward } = useCheckAchievements();
+  const { data: goalStats } = useGoalStats();
+
   const [goalText, setGoalText] = useState('');
   const [analysis, setAnalysis] = useState<GoalAiAnalysis | null>(null);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<SkillDefinition | null>(null);
   const [deadline, setDeadline] = useState<Date>(addWeeks(new Date(), 4));
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [xpToast, setXpToast] = useState<{ visible: boolean; xp: number; achievement?: Achievement | null }>({
+    visible: false, xp: 0, achievement: null,
+  });
 
   const skillLabels = (selectedSkills ?? []).map((s) => s.label);
 
@@ -64,14 +72,33 @@ export default function NewGoalScreen() {
     }
 
     try {
-      await createGoal.mutateAsync({
+      const result = await createGoal.mutateAsync({
         description: goalText.trim(),
         athlete_skills: skillLabels,
         skill_id: selectedSkill?.id,
         skill_label: selectedSkill?.label,
         deadline: deadline.toISOString(),
       });
-      router.back();
+
+      // Calculate total XP earned
+      const baseXp = XP_VALUES.goal_created;
+      const qualityBonus = calculateGoalQualityBonus(result.ai_analysis ?? null);
+      const totalXp = baseXp + qualityBonus;
+
+      // Check achievements with updated stats
+      const stats = goalStats
+        ? { ...goalStats, goalsCreated: goalStats.goalsCreated + 1 }
+        : { goalsCreated: 1, goalsAchieved: 0, reflections: 0, growthPoints: 0, bestGoalQuality: 0, reflectionsWithNotes: 0, currentStreak: 0 };
+
+      const newAchievements = await checkAndAward(stats);
+      const firstAchievement = newAchievements.length > 0 ? newAchievements[0] : null;
+
+      // Show XP toast, then navigate back after it dismisses
+      setXpToast({
+        visible: true,
+        xp: totalXp + (firstAchievement?.xp_reward ?? 0),
+        achievement: firstAchievement,
+      });
     } catch (error: any) {
       Alert.alert(t('common.error'), error.message);
     }
@@ -227,6 +254,15 @@ export default function NewGoalScreen() {
           </Text>
         )}
       </ScrollView>
+      <XpToast
+        visible={xpToast.visible}
+        xpAmount={xpToast.xp}
+        achievement={xpToast.achievement}
+        onDismiss={() => {
+          setXpToast({ visible: false, xp: 0, achievement: null });
+          router.back();
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }

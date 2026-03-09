@@ -2,7 +2,7 @@
   "expo": {
     "name": "deco",
     "slug": "deco",
-    "version": "1.7.0",
+    "version": "1.7.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "deco",

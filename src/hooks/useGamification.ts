@@ -341,6 +341,62 @@ export function useMarkFeedbackSeen() {
   });
 }
 
+// ─── Fetch stats for achievement checking ───────────
+export function useGoalStats() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['goal-stats', user?.id],
+    queryFn: async () => {
+      const [goalsRes, achievedRes, reflRes] = await Promise.all([
+        supabase
+          .from('goals')
+          .select('id, ai_analysis', { count: 'exact', head: false })
+          .eq('athlete_id', user!.id),
+        supabase
+          .from('goals')
+          .select('*', { count: 'exact', head: true })
+          .eq('athlete_id', user!.id)
+          .eq('status', 'achieved'),
+        supabase
+          .from('reflections')
+          .select('id, notes', { count: 'exact', head: false })
+          .eq('athlete_id', user!.id),
+      ]);
+
+      const goals = goalsRes.data ?? [];
+      const goalsCreated = goalsRes.count ?? goals.length;
+      const goalsAchieved = achievedRes.count ?? 0;
+      const reflections = reflRes.count ?? 0;
+      const reflectionsData = reflRes.data ?? [];
+      const reflectionsWithNotes = reflectionsData.filter(
+        (r: any) => r.notes && r.notes.length > 20
+      ).length;
+
+      // Best goal quality (avg of 3 scores)
+      let bestGoalQuality = 0;
+      for (const g of goals) {
+        const a = g.ai_analysis as any;
+        if (a?.specificity_score && a?.measurability_score && a?.challenge_score) {
+          const avg = (a.specificity_score + a.measurability_score + a.challenge_score) / 3;
+          if (avg > bestGoalQuality) bestGoalQuality = avg;
+        }
+      }
+
+      return {
+        goalsCreated,
+        goalsAchieved,
+        reflections,
+        growthPoints: 0, // TODO: track growth points
+        bestGoalQuality: Math.round(bestGoalQuality * 10) / 10,
+        reflectionsWithNotes,
+        currentStreak: 0, // filled from useSessionStreak separately
+      };
+    },
+    enabled: !!user?.id,
+  });
+}
+
 // ─── Calculate quality bonus XP ──────────────────────
 export function calculateGoalQualityBonus(aiAnalysis: {
   specificity_score: number;

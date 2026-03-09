@@ -5,16 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useReflections } from '../../../src/hooks/useReflections';
-import { useGoals, useCoachFeedback } from '../../../src/hooks/useGoals';
 import { useUpcomingSessions } from '../../../src/hooks/useSchedule';
 import { useSkillScoreHistory } from '../../../src/hooks/useSkills';
-import { useAthleteXp, useSessionStreak, useMyAchievements, useAchievements, useUnseenFeedbackCount } from '../../../src/hooks/useGamification';
+import { useAthleteXp, useSessionStreak, useMyAchievements, useAchievements } from '../../../src/hooks/useGamification';
 import { useMyTeams } from '../../../src/hooks/useTeam';
 import { useTeamLeaderboard } from '../../../src/hooks/useGamification';
 import { useAuth } from '../../../src/hooks/useAuth';
@@ -37,15 +35,12 @@ export default function DevelopmentScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { data: reflections, isLoading: loadingReflections } = useReflections();
-  const { data: goals } = useGoals(undefined, 'active');
-  const { data: coachFeedback } = useCoachFeedback();
   const { data: upcomingSessions } = useUpcomingSessions(14);
   const { data: skillHistory } = useSkillScoreHistory();
   const { data: totalXp } = useAthleteXp();
   const { data: streak } = useSessionStreak();
   const { data: myAchievements } = useMyAchievements();
   const { data: allAchievements } = useAchievements();
-  const { data: unseenCount } = useUnseenFeedbackCount();
   const { data: myTeams } = useMyTeams();
   const teamId = myTeams?.[0]?.id;
   const { data: leaderboard } = useTeamLeaderboard(teamId);
@@ -180,88 +175,41 @@ export default function DevelopmentScreen() {
           </>
         )}
 
-        {/* Coach feedback */}
-        <View style={[styles.sectionHeader, { marginTop: Spacing.lg }]}>
-          <Text style={styles.sectionTitle}>{t('development.coachFeedback')}</Text>
-          {(unseenCount ?? 0) > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unseenCount}</Text>
+        {/* Recent reflections - compact list */}
+        {reflections && reflections.length > 0 && (
+          <>
+            <View style={[styles.sectionHeader, { marginTop: Spacing.lg }]}>
+              <Text style={styles.sectionTitle}>{t('development.recentReflections')}</Text>
             </View>
-          )}
-        </View>
-        {coachFeedback && coachFeedback.length > 0 ? (
-          coachFeedback.slice(0, 10).map((comment) => (
-            <Card key={comment.id} style={styles.feedbackCard}>
-              <View style={styles.feedbackHeader}>
-                <Text style={styles.feedbackGoalTitle} numberOfLines={1}>
-                  {comment.goal_title}
-                </Text>
-                <Text style={styles.feedbackDate}>
-                  {format(new Date(comment.created_at), 'd MMM', { locale: nl })}
-                </Text>
-              </View>
-              {comment.is_thumbs_up && !comment.content && (
-                <Ionicons name="thumbs-up" size={20} color={Colors.primary} />
-              )}
-              {comment.content && (
-                <Text style={styles.feedbackContent}>{comment.content}</Text>
-              )}
-            </Card>
-          ))
-        ) : (
-          <View style={styles.empty}>
-            <Ionicons name="chatbubble-outline" size={40} color={Colors.textTertiary} />
-            <Text style={styles.emptyText}>{t('development.noCoachFeedback')}</Text>
-          </View>
-        )}
-
-        {/* Recent reflections */}
-        <View style={[styles.sectionHeader, { marginTop: Spacing.lg }]}>
-          <Text style={styles.sectionTitle}>{t('development.recentReflections')}</Text>
-        </View>
-
-        {loadingReflections ? (
-          <ActivityIndicator size="small" color={Colors.primary} />
-        ) : reflections && reflections.length > 0 ? (
-          reflections.slice(0, 20).map((reflection) => (
-            <Card key={reflection.id} style={styles.reflectionCard}>
-              <View style={styles.reflectionHeader}>
-                <View style={styles.sessionTypeBadge}>
-                  <Ionicons
-                    name={
-                      reflection.session_type === 'training'
-                        ? 'barbell-outline'
-                        : 'trophy-outline'
-                    }
-                    size={14}
-                    color={Colors.primary}
-                  />
-                  <Text style={styles.sessionTypeText}>
-                    {reflection.session_type === 'training' ? t('common.training') : t('common.match')}
+            {reflections.slice(0, 5).map((reflection) => (
+              <Card key={reflection.id} style={styles.reflectionCard}>
+                <View style={styles.reflectionHeader}>
+                  <View style={styles.sessionTypeBadge}>
+                    <Ionicons
+                      name={
+                        reflection.session_type === 'training'
+                          ? 'barbell-outline'
+                          : 'trophy-outline'
+                      }
+                      size={14}
+                      color={Colors.primary}
+                    />
+                    <Text style={styles.sessionTypeText}>
+                      {reflection.session_type === 'training' ? t('common.training') : t('common.match')}
+                    </Text>
+                  </View>
+                  <Text style={styles.reflectionDate}>
+                    {format(new Date(reflection.created_at), 'd MMM yyyy', { locale: nl })}
                   </Text>
                 </View>
-                <Text style={styles.reflectionDate}>
-                  {format(new Date(reflection.created_at), 'd MMM yyyy', { locale: nl })}
-                </Text>
-              </View>
-              {reflection.notes && (
-                <Text style={styles.reflectionNotes} numberOfLines={3}>
-                  {reflection.notes}
-                </Text>
-              )}
-            </Card>
-          ))
-        ) : (
-          <View style={styles.empty}>
-            <Ionicons
-              name="document-text-outline"
-              size={40}
-              color={Colors.textTertiary}
-            />
-            <Text style={styles.emptyText}>
-              {t('development.noReflections')}
-            </Text>
-          </View>
+                {reflection.notes && (
+                  <Text style={styles.reflectionNotes} numberOfLines={2}>
+                    {reflection.notes}
+                  </Text>
+                )}
+              </Card>
+            ))}
+          </>
         )}
       </ScrollView>
 
@@ -415,46 +363,6 @@ const styles = StyleSheet.create({
   },
   achievementsGrid: {
     gap: Spacing.sm,
-  },
-  badge: {
-    backgroundColor: Colors.error,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.white,
-  },
-  feedbackCard: {
-    marginBottom: Spacing.sm,
-    padding: Spacing.md,
-  },
-  feedbackHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  feedbackGoalTitle: {
-    flex: 1,
-    fontSize: FontSize.xs,
-    fontWeight: '600',
-    color: Colors.primary,
-    marginRight: Spacing.sm,
-  },
-  feedbackDate: {
-    fontSize: FontSize.xs,
-    color: Colors.textTertiary,
-  },
-  feedbackContent: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    lineHeight: 20,
   },
   reflectionCard: {
     marginBottom: Spacing.sm,
