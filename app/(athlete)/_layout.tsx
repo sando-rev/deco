@@ -1,10 +1,13 @@
+import { View, Text, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '../../src/constants/theme';
+import { useUnseenFeedbackCount } from '../../src/hooks/useGamification';
 
 export default function AthleteLayout() {
   const { t } = useTranslation();
+  const { data: unseenCount } = useUnseenFeedbackCount();
 
   return (
     <Tabs
@@ -47,7 +50,14 @@ export default function AthleteLayout() {
           title: t('tabs.goals'),
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="flag" size={size} color={color} />
+            <View>
+              <Ionicons name="flag" size={size} color={color} />
+              {(unseenCount ?? 0) > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unseenCount}</Text>
+                </View>
+              )}
+            </View>
           ),
         }}
       />
@@ -73,3 +83,25 @@ export default function AthleteLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    backgroundColor: Colors.error,
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: Colors.surface,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#fff',
+  },
+});

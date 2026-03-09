@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useGoals } from '../../../src/hooks/useGoals';
+import { useGoals, useCoachFeedback } from '../../../src/hooks/useGoals';
 import { useSkillDefinitions } from '../../../src/hooks/useSkills';
 import { GoalCard } from '../../../src/components/GoalCard';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
@@ -31,6 +31,20 @@ export default function GoalsScreen() {
     activeTab === 'all' ? undefined : activeTab
   );
   const { data: skillDefs } = useSkillDefinitions();
+  const { data: coachFeedback } = useCoachFeedback();
+
+  // Group feedback by goal_id for quick lookup
+  const feedbackByGoal = new Map<string, { count: number; unseenCount: number; hasThumbsUp: boolean; latestComment?: string }>();
+  if (coachFeedback) {
+    for (const fb of coachFeedback) {
+      const existing = feedbackByGoal.get(fb.goal_id) ?? { count: 0, unseenCount: 0, hasThumbsUp: false };
+      existing.count++;
+      if (!(fb as any).seen_by_athlete) existing.unseenCount++;
+      if (fb.is_thumbs_up) existing.hasThumbsUp = true;
+      if (fb.content && !existing.latestComment) existing.latestComment = fb.content;
+      feedbackByGoal.set(fb.goal_id, existing);
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -68,6 +82,7 @@ export default function GoalsScreen() {
               goal={item}
               showAiFeedback
               skillDefinitions={skillDefs}
+              coachFeedback={feedbackByGoal.get(item.id)}
               onPress={() => router.push(`/(athlete)/goals/${item.id}`)}
             />
           )}

@@ -18,7 +18,7 @@ export function CTA() {
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <a
-            href="https://github.com/sando-rev/deco/releases/download/v1.7.1/deco-v1.7.1.apk"
+            href="https://github.com/sando-rev/deco/releases/download/v1.7.2/deco-v1.7.2.apk"
             download
             className="inline-flex items-center justify-center gap-2 bg-white text-deco-primary-dark px-8 py-3.5 rounded-full font-semibold hover:bg-gray-100 transition-colors"
           >
@@ -37,7 +37,7 @@ export function CTA() {
           </span>
         </div>
         <p className="text-xs text-white/40 mt-4">
-          v1.7.1 &middot; Android APK &middot; iOS versie binnenkort beschikbaar
+          v1.7.2 &middot; Android APK &middot; iOS versie binnenkort beschikbaar
         </p>
       </div>
     </section>

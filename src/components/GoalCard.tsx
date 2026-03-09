@@ -8,15 +8,23 @@ import { Card } from './ui/Card';
 import { format, differenceInDays } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
+interface CoachFeedbackSummary {
+  count: number;
+  unseenCount: number;
+  hasThumbsUp: boolean;
+  latestComment?: string;
+}
+
 interface GoalCardProps {
   goal: Goal;
   onPress?: () => void;
   showAiFeedback?: boolean;
   coachView?: boolean;
   skillDefinitions?: SkillDefinition[];
+  coachFeedback?: CoachFeedbackSummary;
 }
 
-export function GoalCard({ goal, onPress, showAiFeedback = false, coachView = false, skillDefinitions }: GoalCardProps) {
+export function GoalCard({ goal, onPress, showAiFeedback = false, coachView = false, skillDefinitions, coachFeedback }: GoalCardProps) {
   const { t } = useTranslation();
   // Look up skill label from definitions, fall back to attribute
   const skillLabel = (() => {
@@ -113,6 +121,28 @@ export function GoalCard({ goal, onPress, showAiFeedback = false, coachView = fa
             <Text style={styles.aiText}>{goal.ai_feedback}</Text>
           </View>
         )}
+
+        {coachFeedback && coachFeedback.count > 0 && (
+          <View style={styles.coachFeedback}>
+            <View style={styles.coachHeader}>
+              {coachFeedback.hasThumbsUp && (
+                <Ionicons name="thumbs-up" size={14} color={Colors.primary} />
+              )}
+              <Ionicons name="chatbubble" size={14} color={Colors.primary} />
+              <Text style={styles.coachLabel}>{t('goals.coachFeedback')}</Text>
+              {coachFeedback.unseenCount > 0 && (
+                <View style={styles.unseenBadge}>
+                  <Text style={styles.unseenText}>{coachFeedback.unseenCount}</Text>
+                </View>
+              )}
+            </View>
+            {coachFeedback.latestComment && (
+              <Text style={styles.coachComment} numberOfLines={2}>
+                {coachFeedback.latestComment}
+              </Text>
+            )}
+          </View>
+        )}
       </Card>
     </TouchableOpacity>
   );
@@ -207,5 +237,45 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.text,
     lineHeight: 20,
+  },
+  coachFeedback: {
+    marginTop: Spacing.md,
+    padding: Spacing.md,
+    backgroundColor: Colors.primary + '08',
+    borderRadius: BorderRadius.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
+  },
+  coachHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: Spacing.xs,
+  },
+  coachLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    color: Colors.primary,
+    flex: 1,
+  },
+  unseenBadge: {
+    backgroundColor: Colors.error,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  unseenText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  coachComment: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    fontStyle: 'italic',
   },
 });
