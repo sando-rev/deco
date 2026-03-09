@@ -156,11 +156,14 @@ Analyseer dit doel en reageer met ALLEEN deze JSON (geen markdown, geen uitleg):
     }
 
     const data = await response.json();
-    const content = data.content?.[0]?.text;
+    let content = data.content?.[0]?.text;
 
     if (!content) {
       throw new Error("No content in Anthropic response");
     }
+
+    // Strip markdown code fences if present
+    content = content.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
 
     const analysis: GoalAnalysis = JSON.parse(content);
 
