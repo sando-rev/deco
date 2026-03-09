@@ -112,53 +112,65 @@ function AthleteGoalsScreen() {
   );
 }
 
-function AthleteReflectionScreen() {
+function AthleteDevelopmentScreen() {
+  const leaderboard = [
+    { rank: 1, name: "Sarah van Dijk", xp: 340, streak: 5, medal: "🥇" },
+    { rank: 2, name: "Emma Bakker", xp: 275, streak: 3, medal: "🥈" },
+    { rank: 3, name: "Lisa de Vries", xp: 210, streak: 2, medal: "🥉" },
+  ];
   return (
     <div className="w-full h-full bg-[#F8FAF9] flex flex-col pt-10 px-3">
       <div className="text-[11px] font-extrabold text-[#1A1A2E] mb-2">
-        Sessiereflectie
+        Ontwikkeling
       </div>
-      <div className="flex gap-2 mb-3">
-        <div className="bg-[#1B6B4A] text-white text-[8px] font-semibold px-2.5 py-1 rounded-full">
-          Training
+      {/* XP Hero Card */}
+      <div className="bg-[#1B6B4A] rounded-xl p-3 mb-2 flex items-center justify-between">
+        <div>
+          <div className="text-[7px] text-white/70">Totaal XP</div>
+          <div className="text-[18px] font-extrabold text-white">340</div>
         </div>
-        <div className="bg-gray-100 text-[#6B7280] text-[8px] font-semibold px-2.5 py-1 rounded-full">
-          Wedstrijd
-        </div>
-      </div>
-      <div className="text-[8px] font-semibold text-[#1A1A2E] mb-1.5">
-        Beoordeel je doelen
-      </div>
-      {[
-        { goal: "Verbeter backhand nauwkeurigheid", val: 7 },
-        { goal: "Bouw sprintconditie op", val: 6 },
-        { goal: "Leid de verdedigende druk", val: 8 },
-      ].map((g) => (
-        <div key={g.goal} className="bg-white rounded-xl p-2.5 mb-1.5">
-          <div className="text-[8px] font-semibold text-[#1A1A2E] mb-1">
-            {g.goal}
+        <div className="flex items-center gap-3">
+          <div className="text-center">
+            <div className="text-[14px]">🔥</div>
+            <div className="text-[7px] text-white/70">Streak</div>
+            <div className="text-[10px] font-bold text-white">5</div>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#1B6B4A] rounded-full"
-                style={{ width: `${g.val * 10}%` }}
-              />
-            </div>
-            <div className="w-5 h-5 bg-[#1B6B4A] rounded-full flex items-center justify-center">
-              <span className="text-[7px] text-white font-bold">{g.val}</span>
-            </div>
+          <div className="text-center">
+            <div className="text-[14px]">🏆</div>
+            <div className="text-[7px] text-white/70">Behaald</div>
+            <div className="text-[10px] font-bold text-white">3</div>
           </div>
         </div>
-      ))}
-      <div className="bg-white rounded-xl p-2.5 mt-1">
-        <div className="text-[8px] font-semibold text-[#1A1A2E] mb-1">
-          Notities
-        </div>
-        <div className="text-[7px] text-[#6B7280] leading-relaxed">
-          Goed gefocust op backhandpassen tijdens positioneel spel. Moet harder
-          pushen bij fitnessoefeningen de volgende keer...
-        </div>
+      </div>
+      {/* Leaderboard */}
+      <div className="text-[8px] font-bold text-[#1A1A2E] mb-1">Teamranglijst</div>
+      <div className="bg-white rounded-xl overflow-hidden mb-2">
+        {leaderboard.map((p) => (
+          <div key={p.name} className={`flex items-center justify-between px-2.5 py-1.5 ${p.rank === 1 ? 'bg-[#1B6B4A]/5' : ''}`}>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px]">{p.medal}</span>
+              <div className="text-[8px] font-semibold text-[#1A1A2E]">{p.name}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-[7px] text-[#6B7280]">🔥 {p.streak}</div>
+              <div className="text-[8px] font-bold text-[#1B6B4A]">{p.xp} XP</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Achievements */}
+      <div className="text-[8px] font-bold text-[#1A1A2E] mb-1">Achievements</div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {[
+          { icon: "🎯", name: "Eerste doel", done: true },
+          { icon: "📝", name: "Reflector", done: true },
+          { icon: "🔥", name: "3x Streak", done: false },
+        ].map((a) => (
+          <div key={a.name} className={`bg-white rounded-lg p-1.5 text-center ${!a.done ? 'opacity-40' : ''}`}>
+            <div className="text-[12px]">{a.icon}</div>
+            <div className="text-[6px] text-[#1A1A2E] font-semibold">{a.name}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -325,7 +337,7 @@ export function ScreenshotGallery({ activeRole }: ScreenshotGalleryProps) {
       ? [
           { comp: <AthleteProfileScreen />, label: "Vaardigheidsprofiel" },
           { comp: <AthleteGoalsScreen />, label: "Slimme doelen" },
-          { comp: <AthleteReflectionScreen />, label: "Reflecties" },
+          { comp: <AthleteDevelopmentScreen />, label: "XP & Ranglijst" },
         ]
       : [
           { comp: <CoachTeamScreen />, label: "Teamoverzicht" },

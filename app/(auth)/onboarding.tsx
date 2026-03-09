@@ -30,6 +30,9 @@ import { Colors, Spacing, FontSize, BorderRadius } from '../../src/constants/the
 import { PositionType, SkillCategory, SkillDefinition, SkillPositionType, ScheduleSessionType, TrainingSchedule } from '../../src/types/database';
 import { supabase } from '../../src/services/supabase';
 import { useCreateGoal, useGetGoalFeedback } from '../../src/hooks/useGoals';
+import { useMyTeams } from '../../src/hooks/useTeam';
+import { useTeamLeaderboard } from '../../src/hooks/useGamification';
+import { Leaderboard } from '../../src/components/Leaderboard';
 import { addWeeks, format } from 'date-fns';
 import { nl, enUS as enLocale } from 'date-fns/locale';
 import { GoalAnalysisCard } from '../../src/components/GoalAnalysisCard';
@@ -45,7 +48,8 @@ type OnboardingStep =
   | 'notifications'
   | 'schedule'
   | 'scoring'
-  | 'goal';
+  | 'goal'
+  | 'leaderboard';
 
 const STEP_ORDER: OnboardingStep[] = [
   'welcome',
@@ -58,6 +62,7 @@ const STEP_ORDER: OnboardingStep[] = [
   'schedule',
   'scoring',
   'goal',
+  'leaderboard',
 ];
 
 export default function Onboarding() {
@@ -1750,19 +1755,125 @@ function AthleteOnboarding() {
   }
 
   // Goal step
+  if (step === 'goal') {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+        <ProgressBar currentStep={step} />
+        <GoalSettingStep
+          selectedSkills={selectedSkills}
+          scores={scores}
+          position={position}
+          onComplete={goForward}
+          onBack={goBack}
+        />
+      </View>
+    );
+  }
+
+  // Leaderboard step (final)
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <ProgressBar currentStep={step} />
-      <GoalSettingStep
-        selectedSkills={selectedSkills}
-        scores={scores}
-        position={position}
+      <LeaderboardStep
         onComplete={handleComplete}
         onBack={goBack}
+        loading={loading}
       />
     </View>
   );
 }
+
+// ─── Leaderboard Step ─────────────────────────────────
+function LeaderboardStep({
+  onComplete,
+  onBack,
+  loading,
+}: {
+  onComplete: () => void;
+  onBack: () => void;
+  loading: boolean;
+}) {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const { data: myTeams } = useMyTeams();
+  const teamId = myTeams?.[0]?.id;
+  const { data: leaderboard } = useTeamLeaderboard(teamId);
+
+  return (
+    <ScrollView contentContainerStyle={leaderboardStyles.container}>
+      <View style={leaderboardStyles.header}>
+        <Ionicons name="podium-outline" size={48} color={Colors.primary} />
+        <Text style={leaderboardStyles.title}>{t('gamification.teamRanking')}</Text>
+        <Text style={leaderboardStyles.subtitle}>
+          {teamId
+            ? t('onboarding.leaderboardDesc')
+            : t('onboarding.leaderboardNoTeam')}
+        </Text>
+      </View>
+
+      {leaderboard && leaderboard.length > 0 ? (
+        <View style={leaderboardStyles.list}>
+          <Leaderboard entries={leaderboard} currentUserId={user?.id} />
+        </View>
+      ) : (
+        <View style={leaderboardStyles.emptyState}>
+          <Ionicons name="people-outline" size={48} color={Colors.textTertiary} />
+          <Text style={leaderboardStyles.emptyText}>
+            {t('onboarding.leaderboardEmpty')}
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.buttonRow}>
+        <Button title={t('common.back')} onPress={onBack} variant="outline" style={{ flex: 1 }} />
+        <Button
+          title={loading ? t('common.loading') : t('onboarding.complete')}
+          onPress={onComplete}
+          loading={loading}
+          style={{ flex: 1 }}
+        />
+      </View>
+    </ScrollView>
+  );
+}
+
+const leaderboardStyles = StyleSheet.create({
+  container: {
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  title: {
+    fontSize: FontSize.xxl,
+    fontWeight: '800',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: FontSize.md,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  list: {
+    marginBottom: Spacing.xl,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xxl,
+    gap: Spacing.md,
+  },
+  emptyText: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+});
 
 // ─── Coach Onboarding ──────────────────────────────────
 function CoachOnboarding() {

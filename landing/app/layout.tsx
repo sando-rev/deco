@@ -21,7 +21,9 @@ export default function RootLayout({
   return (
     <html lang="nl">
       <head>
-        <link rel="icon" href="/images/icon.png" />
+        <link rel="icon" href="/images/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/images/icon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/images/icon.png" />
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"

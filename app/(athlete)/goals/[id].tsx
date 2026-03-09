@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useGoalWithComments, useUpdateGoalStatus } from '../../../src/hooks/useGoals';
 import { useSkillDefinitions, useLatestSkillScores } from '../../../src/hooks/useSkills';
+import { useMarkFeedbackSeen } from '../../../src/hooks/useGamification';
 import { GoalAnalysisCard } from '../../../src/components/GoalAnalysisCard';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
 import { Button } from '../../../src/components/ui/Button';
@@ -34,6 +35,14 @@ export default function GoalDetailScreen() {
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [selectedImprovement, setSelectedImprovement] = useState<number>(1);
   const [showCelebration, setShowCelebration] = useState(false);
+  const markSeen = useMarkFeedbackSeen();
+
+  // Mark coach comments as seen when viewing this goal
+  React.useEffect(() => {
+    if (goal?.coach_comments?.some((c) => !(c as any).seen_by_athlete)) {
+      markSeen.mutate(id);
+    }
+  }, [goal?.coach_comments?.length]);
 
   if (isLoading || !goal) {
     return (
@@ -200,20 +209,28 @@ export default function GoalDetailScreen() {
 
         {goal.coach_comments && goal.coach_comments.length > 0 && (
           <View style={styles.commentsSection}>
-            <Text style={styles.sectionTitle}>{t('goals.coachFeedback')}</Text>
-            {goal.coach_comments.map((comment) => (
-              <Card key={comment.id} style={styles.commentCard}>
-                {comment.is_thumbs_up && (
-                  <Ionicons name="thumbs-up" size={20} color={Colors.primary} />
-                )}
-                {comment.content && (
+            <View style={styles.feedbackHeader}>
+              <Ionicons name="chatbubbles" size={18} color={Colors.primary} />
+              <Text style={styles.sectionTitle}>{t('goals.coachFeedback')}</Text>
+            </View>
+            {/* Thumbs up indicator */}
+            {goal.coach_comments.some((c) => c.is_thumbs_up) && (
+              <View style={styles.thumbsUpBanner}>
+                <Ionicons name="thumbs-up" size={18} color={Colors.primary} />
+                <Text style={styles.thumbsUpText}>{t('coachFeedback.thumbsUp')}</Text>
+              </View>
+            )}
+            {/* Text comments */}
+            {goal.coach_comments
+              .filter((c) => c.content)
+              .map((comment) => (
+                <Card key={comment.id} style={styles.commentCard}>
                   <Text style={styles.commentText}>{comment.content}</Text>
-                )}
-                <Text style={styles.commentDate}>
-                  {format(new Date(comment.created_at), 'd MMM yyyy', { locale: nl })}
-                </Text>
-              </Card>
-            ))}
+                  <Text style={styles.commentDate}>
+                    {format(new Date(comment.created_at), 'd MMM yyyy', { locale: nl })}
+                  </Text>
+                </Card>
+              ))}
           </View>
         )}
 
@@ -412,11 +429,31 @@ const styles = StyleSheet.create({
   commentsSection: {
     marginBottom: Spacing.lg,
   },
+  feedbackHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  thumbsUpBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.primary + '10',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.sm,
+  },
+  thumbsUpText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
   sectionTitle: {
     fontSize: FontSize.lg,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: Spacing.md,
   },
   commentCard: {
     marginBottom: Spacing.sm,

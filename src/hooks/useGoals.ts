@@ -3,6 +3,7 @@ import { supabase } from '../services/supabase';
 import { Goal, GoalStatus, CoachComment, GoalAiAnalysis } from '../types/database';
 import { getGoalFeedback } from '../services/ai';
 import { useAuth } from './useAuth';
+import { XP_VALUES, calculateGoalQualityBonus } from './useGamification';
 
 export function useGoals(athleteId?: string, status?: GoalStatus) {
   const { user } = useAuth();
@@ -107,10 +108,34 @@ export function useCreateGoal() {
 
       if (error) throw error;
 
+      // Award XP for creating a goal
+      try {
+        await supabase.from('xp_events').insert({
+          athlete_id: user!.id,
+          event_type: 'goal_created',
+          points: XP_VALUES.goal_created,
+          reference_id: (goal as Goal).id,
+        });
+        // Quality bonus
+        const qualityBonus = calculateGoalQualityBonus(aiAnalysis);
+        if (qualityBonus > 0) {
+          await supabase.from('xp_events').insert({
+            athlete_id: user!.id,
+            event_type: 'quality_bonus',
+            points: qualityBonus,
+            reference_id: (goal as Goal).id,
+          });
+        }
+      } catch {
+        // XP is non-critical
+      }
+
       return { ...(goal as Goal), ai_analysis: aiAnalysis };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['athlete-xp', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['xp-events', user?.id] });
     },
   });
 }
@@ -181,10 +206,23 @@ export function useUpdateGoalStatus() {
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['goals', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['skill-scores', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['skill-score-history', user?.id] });
+
+      // Award XP for achieving a goal
+      if (variables.status === 'achieved') {
+        supabase.from('xp_events').insert({
+          athlete_id: user!.id,
+          event_type: 'goal_achieved',
+          points: XP_VALUES.goal_achieved,
+          reference_id: variables.goalId,
+        }).then(() => {
+          queryClient.invalidateQueries({ queryKey: ['athlete-xp', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['xp-events', user?.id] });
+        });
+      }
     },
   });
 }

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { SkillDefinition, SkillCategory, SkillPositionType, AthleteSkillScore, AthleteSkillWithDefinition, PositionType } from '../types/database';
 import { useAuth } from './useAuth';
+import { XP_VALUES } from './useGamification';
 
 export function useSkillDefinitions() {
   return useQuery({
@@ -163,10 +164,32 @@ export function useSaveSkillScores() {
         );
 
       if (error) throw error;
+
+      // Award XP for radar profile assessment
+      try {
+        // Check if this is the first assessment (radar_profile XP) or a reassessment
+        const { count } = await supabase
+          .from('xp_events')
+          .select('*', { count: 'exact', head: true })
+          .eq('athlete_id', user!.id)
+          .eq('event_type', 'radar_profile');
+
+        if ((count ?? 0) === 0) {
+          // First radar profile: 50 XP
+          await supabase.from('xp_events').insert({
+            athlete_id: user!.id,
+            event_type: 'radar_profile',
+            points: XP_VALUES.radar_profile,
+          });
+        }
+      } catch {
+        // XP is non-critical
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['skill-scores', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['skill-score-history', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['athlete-xp', user?.id] });
     },
   });
 }

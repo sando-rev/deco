@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { Reflection, ReflectionGoal, SessionType, Goal } from '../types/database';
 import { useAuth } from './useAuth';
+import { XP_VALUES, calculateReflectionQualityBonus } from './useGamification';
 
 export function useReflections(athleteId?: string) {
   const { user } = useAuth();
@@ -121,11 +122,31 @@ export function useCreateReflection() {
         if (gError) throw gError;
       }
 
+      // Award XP for reflection
+      try {
+        const baseXp = XP_VALUES.reflection;
+        const qualityBonus = calculateReflectionQualityBonus(
+          input.notes,
+          input.goal_ratings.length
+        );
+        await supabase.from('xp_events').insert({
+          athlete_id: user!.id,
+          event_type: 'reflection',
+          points: baseXp + qualityBonus,
+          reference_id: (reflection as Reflection).id,
+        });
+      } catch {
+        // XP is non-critical
+      }
+
       return reflection as Reflection;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reflections', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['goal-progress'] });
+      queryClient.invalidateQueries({ queryKey: ['athlete-xp', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['xp-events', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['session-streak', user?.id] });
     },
   });
 }

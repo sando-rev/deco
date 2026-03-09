@@ -155,6 +155,7 @@ export interface CoachComment {
   goal_id: string;
   content: string | null;
   is_thumbs_up: boolean;
+  seen_by_athlete: boolean;
   created_at: string;
 }
 
@@ -208,4 +209,31 @@ export interface MatchDate {
   start_time: string | null;
   label: string | null;
   created_at: string;
+}
+
+// Gamification
+export interface XpEvent {
+  id: string;
+  athlete_id: string;
+  event_type: string;
+  points: number;
+  reference_id: string | null;
+  created_at: string;
+}
+
+export interface Achievement {
+  id: string;
+  key: string;
+  category: string;
+  icon: string;
+  threshold: number;
+  xp_reward: number;
+  display_order: number;
+}
+
+export interface AthleteAchievement {
+  id: string;
+  athlete_id: string;
+  achievement_id: string;
+  earned_at: string;
 }

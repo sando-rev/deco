@@ -14,7 +14,13 @@ import { useReflections } from '../../../src/hooks/useReflections';
 import { useGoals, useCoachFeedback } from '../../../src/hooks/useGoals';
 import { useUpcomingSessions } from '../../../src/hooks/useSchedule';
 import { useSkillScoreHistory } from '../../../src/hooks/useSkills';
+import { useAthleteXp, useSessionStreak, useMyAchievements, useAchievements, useUnseenFeedbackCount } from '../../../src/hooks/useGamification';
+import { useMyTeams } from '../../../src/hooks/useTeam';
+import { useTeamLeaderboard } from '../../../src/hooks/useGamification';
+import { useAuth } from '../../../src/hooks/useAuth';
 import { Card } from '../../../src/components/ui/Card';
+import { Leaderboard } from '../../../src/components/Leaderboard';
+import { AchievementCard } from '../../../src/components/AchievementCard';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -29,37 +35,23 @@ const SESSION_TYPE_ICONS = {
 export default function DevelopmentScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { user } = useAuth();
   const { data: reflections, isLoading: loadingReflections } = useReflections();
   const { data: goals } = useGoals(undefined, 'active');
   const { data: coachFeedback } = useCoachFeedback();
   const { data: upcomingSessions } = useUpcomingSessions(14);
   const { data: skillHistory } = useSkillScoreHistory();
+  const { data: totalXp } = useAthleteXp();
+  const { data: streak } = useSessionStreak();
+  const { data: myAchievements } = useMyAchievements();
+  const { data: allAchievements } = useAchievements();
+  const { data: unseenCount } = useUnseenFeedbackCount();
+  const { data: myTeams } = useMyTeams();
+  const teamId = myTeams?.[0]?.id;
+  const { data: leaderboard } = useTeamLeaderboard(teamId);
 
-  const activeGoalCount = goals?.length ?? 0;
   const reflectionCount = reflections?.length ?? 0;
-
-  // Calculate streak (consecutive days with reflections)
-  const streak = (() => {
-    if (!reflections || reflections.length === 0) return 0;
-    let count = 0;
-    const today = new Date();
-    const dates = reflections.map((r) =>
-      format(new Date(r.created_at), 'yyyy-MM-dd')
-    );
-    const uniqueDates = [...new Set(dates)];
-    for (let i = 0; i < uniqueDates.length; i++) {
-      const expectedDate = format(
-        new Date(today.getTime() - i * 86400000),
-        'yyyy-MM-dd'
-      );
-      if (uniqueDates.includes(expectedDate)) {
-        count++;
-      } else {
-        break;
-      }
-    }
-    return count;
-  })();
+  const streakCount = streak ?? 0;
 
   // Count skill assessments
   const assessmentCount = (() => {
@@ -68,18 +60,34 @@ export default function DevelopmentScreen() {
     return dates.size;
   })();
 
+  // Achievement earned keys
+  const earnedKeys = new Set(
+    (myAchievements ?? []).map((a) => a.achievement?.key).filter(Boolean)
+  );
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
+        {/* XP & Streak hero */}
+        <Card style={styles.xpHero} padding={Spacing.md}>
+          <View style={styles.xpRow}>
+            <View style={styles.xpMain}>
+              <Text style={styles.xpValue}>{totalXp ?? 0}</Text>
+              <Text style={styles.xpLabel}>XP</Text>
+            </View>
+            <View style={styles.streakMain}>
+              <Ionicons name="flame" size={22} color="#FF6B35" />
+              <Text style={styles.streakValue}>{streakCount}</Text>
+              <Text style={styles.streakLabel}>{t('gamification.streak')}</Text>
+            </View>
+          </View>
+        </Card>
+
         {/* Stats cards */}
         <View style={styles.statsRow}>
           <Card style={styles.statCard} padding={Spacing.md}>
             <Text style={styles.statNumber}>{reflectionCount}</Text>
             <Text style={styles.statLabel}>{t('development.reflections')}</Text>
-          </Card>
-          <Card style={styles.statCard} padding={Spacing.md}>
-            <Text style={styles.statNumber}>{streak}</Text>
-            <Text style={styles.statLabel}>{t('development.streak')}</Text>
           </Card>
           <Card style={styles.statCard} padding={Spacing.md}>
             <Text style={[styles.statNumber, { color: Colors.success }]}>{assessmentCount}</Text>
@@ -144,9 +152,42 @@ export default function DevelopmentScreen() {
           </Card>
         )}
 
+        {/* Team Leaderboard */}
+        {leaderboard && leaderboard.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{t('gamification.teamRanking')}</Text>
+            </View>
+            <Leaderboard entries={leaderboard} currentUserId={user?.id} />
+          </>
+        )}
+
+        {/* Achievements preview */}
+        {allAchievements && allAchievements.length > 0 && (
+          <>
+            <View style={[styles.sectionHeader, { marginTop: Spacing.lg }]}>
+              <Text style={styles.sectionTitle}>{t('gamification.achievements')}</Text>
+            </View>
+            <View style={styles.achievementsGrid}>
+              {allAchievements.slice(0, 6).map((achievement) => (
+                <AchievementCard
+                  key={achievement.id}
+                  achievement={achievement}
+                  earned={earnedKeys.has(achievement.key)}
+                />
+              ))}
+            </View>
+          </>
+        )}
+
         {/* Coach feedback */}
-        <View style={styles.sectionHeader}>
+        <View style={[styles.sectionHeader, { marginTop: Spacing.lg }]}>
           <Text style={styles.sectionTitle}>{t('development.coachFeedback')}</Text>
+          {(unseenCount ?? 0) > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unseenCount}</Text>
+            </View>
+          )}
         </View>
         {coachFeedback && coachFeedback.length > 0 ? (
           coachFeedback.slice(0, 10).map((comment) => (
@@ -159,7 +200,12 @@ export default function DevelopmentScreen() {
                   {format(new Date(comment.created_at), 'd MMM', { locale: nl })}
                 </Text>
               </View>
-              <Text style={styles.feedbackContent}>{comment.content}</Text>
+              {comment.is_thumbs_up && !comment.content && (
+                <Ionicons name="thumbs-up" size={20} color={Colors.primary} />
+              )}
+              {comment.content && (
+                <Text style={styles.feedbackContent}>{comment.content}</Text>
+              )}
             </Card>
           ))
         ) : (
@@ -239,6 +285,43 @@ const styles = StyleSheet.create({
   content: {
     padding: Spacing.lg,
     paddingBottom: 100,
+  },
+  xpHero: {
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.primaryDark,
+  },
+  xpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  xpMain: {
+    alignItems: 'center',
+  },
+  xpValue: {
+    fontSize: FontSize.xxxl,
+    fontWeight: '900',
+    color: Colors.white,
+  },
+  xpLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.white,
+    opacity: 0.7,
+  },
+  streakMain: {
+    alignItems: 'center',
+  },
+  streakValue: {
+    fontSize: FontSize.xxl,
+    fontWeight: '800',
+    color: Colors.white,
+  },
+  streakLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.white,
+    opacity: 0.7,
   },
   statsRow: {
     flexDirection: 'row',
@@ -329,6 +412,23 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
     lineHeight: 20,
+  },
+  achievementsGrid: {
+    gap: Spacing.sm,
+  },
+  badge: {
+    backgroundColor: Colors.error,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.white,
   },
   feedbackCard: {
     marginBottom: Spacing.sm,
