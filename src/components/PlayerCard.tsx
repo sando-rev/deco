@@ -4,8 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { TeamMemberWithProfile } from '../types/database';
 import { Colors, Spacing, FontSize, BorderRadius } from '../constants/theme';
 import { Card } from './ui/Card';
-import { formatDistanceToNow } from 'date-fns';
-import { nl } from 'date-fns/locale';
 
 interface PlayerCardProps {
   member: TeamMemberWithProfile;
@@ -13,17 +11,13 @@ interface PlayerCardProps {
 }
 
 export function PlayerCard({ member, onPress }: PlayerCardProps) {
-  const { profile, active_goals_count, last_reflection_date } = member;
+  const { profile, active_goals_count, active_goal_skills = [] } = member;
   const initials = profile.full_name
     .split(' ')
     .map((n) => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
-
-  const lastActive = last_reflection_date
-    ? formatDistanceToNow(new Date(last_reflection_date), { addSuffix: true, locale: nl })
-    : 'Nog geen reflecties';
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
@@ -34,7 +28,13 @@ export function PlayerCard({ member, onPress }: PlayerCardProps) {
           </View>
           <View style={styles.info}>
             <Text style={styles.name}>{profile.full_name}</Text>
-            <Text style={styles.lastActive}>{lastActive}</Text>
+            {active_goal_skills.length > 0 ? (
+              active_goal_skills.map((skill, i) => (
+                <Text key={i} style={styles.skillLabel}>{skill}</Text>
+              ))
+            ) : (
+              <Text style={styles.skillLabel}>Geen actieve doelen</Text>
+            )}
           </View>
           <View style={styles.stats}>
             <View style={styles.statItem}>
@@ -79,10 +79,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
   },
-  lastActive: {
+  skillLabel: {
     fontSize: FontSize.xs,
     color: Colors.textSecondary,
-    marginTop: 2,
+    marginTop: 1,
   },
   stats: {
     flexDirection: 'row',

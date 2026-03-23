@@ -187,6 +187,7 @@ export function useCheckAchievements() {
     bestGoalQuality: number;
     reflectionsWithNotes: number;
     currentStreak: number;
+    bestRank: number;
   }) => {
     if (!allAchievements || !myAchievements) return [];
 
@@ -198,9 +199,11 @@ export function useCheckAchievements() {
 
     const checkMap: Record<string, number> = {
       first_goal: stats.goalsCreated,
+      three_goals: stats.goalsCreated,
       five_goals: stats.goalsCreated,
       ten_goals: stats.goalsCreated,
       first_achieved: stats.goalsAchieved,
+      three_achieved: stats.goalsAchieved,
       five_achieved: stats.goalsAchieved,
       ten_achieved: stats.goalsAchieved,
       first_reflection: stats.reflections,
@@ -215,6 +218,8 @@ export function useCheckAchievements() {
       streak_7: stats.currentStreak,
       streak_14: stats.currentStreak,
       streak_30: stats.currentStreak,
+      top_3_team: stats.bestRank > 0 && stats.bestRank <= 3 ? 1 : 0,
+      number_1_team: stats.bestRank === 1 ? 1 : 0,
     };
 
     for (const achievement of allAchievements) {
@@ -391,6 +396,7 @@ export function useGoalStats() {
         bestGoalQuality: Math.round(bestGoalQuality * 10) / 10,
         reflectionsWithNotes,
         currentStreak: 0, // filled from useSessionStreak separately
+        bestRank: 0, // filled from leaderboard separately
       };
     },
     enabled: !!user?.id,
@@ -420,6 +426,7 @@ export function calculateReflectionQualityBonus(
   let bonus = 0;
   if (notes && notes.length > 20) bonus += 5;
   if (notes && notes.length > 100) bonus += 5;
+  if (notes && notes.length > 250) bonus += 5;
   if (goalRatingsCount > 0) bonus += 5;
   if (goalRatingsCount >= 3) bonus += 5;
   return bonus;

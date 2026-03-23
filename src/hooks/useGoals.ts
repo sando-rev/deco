@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { Goal, GoalStatus, CoachComment, GoalAiAnalysis } from '../types/database';
@@ -264,4 +265,49 @@ export function useCoachFeedback(athleteId?: string) {
     },
     enabled: !!id,
   });
+}
+
+// ─── Real-time subscription for coach actions ────────
+export function useRealtimeCoachFeedback() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('coach-feedback-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'deco',
+          table: 'coach_comments',
+        },
+        (payload: any) => {
+          const goalId = payload.new?.goal_id ?? payload.old?.goal_id;
+          if (goalId) {
+            queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
+          }
+          queryClient.invalidateQueries({ queryKey: ['coach-feedback', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unseen-feedback', user.id] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'deco',
+          table: 'coach_score_feedback',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['score-feedback', user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
 }

@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 import { supabase } from '../services/supabase';
 import { useAuth } from './useAuth';
 
@@ -12,14 +13,48 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
-async function registerForPushNotifications(): Promise<string | null> {
+/**
+ * Gets the push token if permission is already granted.
+ * Does NOT request permission — onboarding handles that.
+ * For existing users who granted permission before, this retrieves the token.
+ */
+async function getPushTokenIfGranted(): Promise<string | null> {
   if (!Device.isDevice) {
-    console.log('Push notifications require a physical device');
     return null;
   }
+
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status !== 'granted') {
+    return null;
+  }
+
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? '1d4ac95d-3bd4-4fc4-aa17-2df95e766acc';
+  const tokenData = await Notifications.getExpoPushTokenAsync({
+    projectId,
+  });
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+    });
+  }
+
+  return tokenData.data;
+}
+
+/**
+ * Requests push notification permission and returns the token.
+ * Call this explicitly from onboarding or settings.
+ */
+export async function requestPushPermission(): Promise<string | null> {
+  if (!Device.isDevice) return null;
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -29,18 +64,11 @@ async function registerForPushNotifications(): Promise<string | null> {
     finalStatus = status;
   }
 
-  if (finalStatus !== 'granted') {
-    console.log('Push notification permission not granted');
-    return null;
-  }
+  if (finalStatus !== 'granted') return null;
 
-  // Get the Expo push token
-  const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-  const tokenData = await Notifications.getExpoPushTokenAsync({
-    projectId,
-  });
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? '1d4ac95d-3bd4-4fc4-aa17-2df95e766acc';
+  const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
 
-  // Android needs a notification channel
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'Default',
@@ -54,19 +82,24 @@ async function registerForPushNotifications(): Promise<string | null> {
 
 export function useNotifications() {
   const { user, profile } = useAuth();
-  const notificationListener = useRef<Notifications.EventSubscription>();
-  const responseListener = useRef<Notifications.EventSubscription>();
+  const notificationListener = useRef<Notifications.EventSubscription | null>(null);
+  const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
     if (!user || !profile) return;
 
-    // Register and save push token
-    registerForPushNotifications().then(async (token) => {
+    // Get push token if permission already granted, and save to profile
+    getPushTokenIfGranted().then(async (token) => {
       if (token && token !== profile.push_token) {
-        await supabase
+        const { error } = await supabase
           .from('profiles')
           .update({ push_token: token })
           .eq('id', user.id);
+        if (error) {
+          console.error('Failed to save push token:', error);
+        } else {
+          console.log('Push token saved successfully');
+        }
       }
     });
 
@@ -80,8 +113,28 @@ export function useNotifications() {
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response.notification.request.content.data;
-        // Handle navigation based on notification data
         console.log('Notification tapped:', data);
+
+        if (data?.type === 'session_focus') {
+          router.push({
+            pathname: '/(athlete)/development/session-goals' as any,
+            params: data?.sessionId ? { sessionId: data.sessionId as string } : {},
+          });
+        } else if (data?.type === 'post_training') {
+          router.push({
+            pathname: '/(athlete)/development/reflect' as any,
+            params: data?.sessionId ? { sessionId: data.sessionId as string } : {},
+          });
+        } else if (data?.type === 'coach_feedback' && data?.goalId) {
+          router.push({
+            pathname: '/(athlete)/goals/[id]' as any,
+            params: { id: data.goalId as string },
+          });
+        } else if (data?.type === 'weekly_review') {
+          router.push('/(athlete)/development/reflect' as any);
+        } else if (data?.type === 'coach_report') {
+          router.push('/(coach)/reports' as any);
+        }
       });
 
     return () => {

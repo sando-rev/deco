@@ -31,7 +31,8 @@ import { PositionType, SkillCategory, SkillDefinition, SkillPositionType, Schedu
 import { supabase } from '../../src/services/supabase';
 import { useCreateGoal, useGetGoalFeedback } from '../../src/hooks/useGoals';
 import { useMyTeams } from '../../src/hooks/useTeam';
-import { useTeamLeaderboard } from '../../src/hooks/useGamification';
+import { useTeamLeaderboard, useCheckAchievements, useGoalStats, useAwardXp, XP_VALUES, calculateGoalQualityBonus } from '../../src/hooks/useGamification';
+import { useCelebration } from '../../src/components/CelebrationContext';
 import { Leaderboard } from '../../src/components/Leaderboard';
 import { addWeeks, format } from 'date-fns';
 import { nl, enUS as enLocale } from 'date-fns/locale';
@@ -656,8 +657,10 @@ function NotificationStep({
       if (Device.isDevice) {
         const { status } = await Notifications.requestPermissionsAsync();
         if (status === 'granted') {
-          const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+          const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? '1d4ac95d-3bd4-4fc4-aa17-2df95e766acc';
+          console.log('[onboarding-push] requesting token with projectId:', projectId);
           const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+          console.log('[onboarding-push] got token:', tokenData.data);
 
           if (Platform.OS === 'android') {
             await Notifications.setNotificationChannelAsync('default', {
@@ -669,15 +672,22 @@ function NotificationStep({
 
           // Save token to profile
           if (user) {
-            await supabase
+            const { error: updateError } = await supabase
               .from('profiles')
               .update({ push_token: tokenData.data })
               .eq('id', user.id);
+            if (updateError) {
+              console.error('[onboarding-push] Failed to save token:', updateError);
+            } else {
+              console.log('[onboarding-push] Token saved:', tokenData.data);
+            }
           }
+        } else {
+          console.log('[onboarding-push] Permission not granted:', status);
         }
       }
     } catch (e) {
-      console.log('Notification setup error:', e);
+      console.error('[onboarding-push] Notification setup error:', e);
     }
     setLoading(false);
     onContinue();
@@ -1300,6 +1310,9 @@ function GoalSettingStep({
   onBack: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const { celebrate } = useCelebration();
+  const { checkAndAward } = useCheckAchievements();
+  const { data: goalStats } = useGoalStats();
   // Find the lowest scored skill
   const lowestSkill = selectedSkills.length > 0
     ? selectedSkills.reduce((lowest, skill) => {
@@ -1343,7 +1356,7 @@ function GoalSettingStep({
       return;
     }
     try {
-      await createGoal.mutateAsync({
+      const result = await createGoal.mutateAsync({
         description: goalDescription,
         skill_id: selectedSkillId || undefined,
         skill_label: selectedSkillForGoal?.label,
@@ -1351,6 +1364,38 @@ function GoalSettingStep({
         deadline: deadline.toISOString(),
       });
       setGoalSaved(true);
+
+      // Show XP toast for goal creation
+      const baseXp = XP_VALUES.goal_created;
+      const qualityBonus = calculateGoalQualityBonus((result as any)?.ai_analysis ?? null);
+      const totalXp = baseXp + qualityBonus;
+
+      // Check achievements (first_goal)
+      const stats = goalStats
+        ? { ...goalStats, goalsCreated: goalStats.goalsCreated + 1 }
+        : { goalsCreated: 1, goalsAchieved: 0, reflections: 0, growthPoints: 0, bestGoalQuality: 0, reflectionsWithNotes: 0, currentStreak: 0, bestRank: 0 };
+
+      const newAchievements = await checkAndAward(stats);
+      const firstAchievement = newAchievements.length > 0 ? newAchievements[0] : null;
+
+      const allXp = totalXp + (firstAchievement?.xp_reward ?? 0);
+      celebrate({
+        type: 'xp',
+        message: t('gamification.xpEarned', { points: allXp }),
+        subMessage: t('gamification.xpReasonGoalCreated'),
+        xpAmount: allXp,
+      });
+
+      if (firstAchievement) {
+        celebrate({
+          type: 'achievement',
+          message: t('gamification.newAchievement'),
+          subMessage: t(`achievements.${firstAchievement.key}` as any),
+          icon: firstAchievement.icon,
+          xpAmount: firstAchievement.xp_reward,
+          confetti: true,
+        });
+      }
     } catch (error: any) {
       Alert.alert(t('common.error'), error.message ?? t('onboarding.couldNotSaveGoal'));
     }
@@ -1580,6 +1625,8 @@ const goalStyles = StyleSheet.create({
 // ─── Athlete Onboarding (Main Component) ───────────────
 function AthleteOnboarding() {
   const { t } = useTranslation();
+  const { celebrate } = useCelebration();
+  const awardXp = useAwardXp();
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const [position, setPosition] = useState<PositionType | null>(null);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
@@ -1662,7 +1709,20 @@ function AthleteOnboarding() {
         await saveDefaultMatchDay.mutateAsync(defaultMatchDay);
       }
 
-      // 6. Complete onboarding
+      // 6. Award radar profile XP
+      await awardXp.mutateAsync({
+        eventType: 'radar_profile',
+        points: XP_VALUES.radar_profile,
+      });
+
+      celebrate({
+        type: 'xp',
+        message: t('gamification.xpEarned', { points: XP_VALUES.radar_profile }),
+        subMessage: t('gamification.xpReasonOnboarding'),
+        xpAmount: XP_VALUES.radar_profile,
+      });
+
+      // 7. Complete onboarding
       await completeOnboarding.mutateAsync();
     } catch (error: any) {
       Alert.alert(t('common.error'), error.message);
@@ -1695,7 +1755,7 @@ function AthleteOnboarding() {
   if (categorySteps.includes(step)) {
     const category = SKILL_CATEGORIES.find((c) => c.key === (step as SkillCategory))!;
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <View key={step} style={{ flex: 1, backgroundColor: Colors.background }}>
         <ProgressBar currentStep={step} />
         <SkillSelectionStep
           category={category}
@@ -1713,7 +1773,7 @@ function AthleteOnboarding() {
 
   if (step === 'notifications') {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <View key={step} style={{ flex: 1, backgroundColor: Colors.background }}>
         <ProgressBar currentStep={step} />
         <NotificationStep onContinue={goForward} onBack={goBack} />
       </View>
@@ -1722,7 +1782,7 @@ function AthleteOnboarding() {
 
   if (step === 'schedule') {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <View key={step} style={{ flex: 1, backgroundColor: Colors.background }}>
         <ProgressBar currentStep={step} />
         <ScheduleStep
           onContinue={goForward}
@@ -1740,7 +1800,7 @@ function AthleteOnboarding() {
 
   if (step === 'scoring') {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <View key={step} style={{ flex: 1, backgroundColor: Colors.background }}>
         <ProgressBar currentStep={step} />
         <ScoringStep
           selectedSkills={selectedSkills}
@@ -1757,7 +1817,7 @@ function AthleteOnboarding() {
   // Goal step
   if (step === 'goal') {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <View key={step} style={{ flex: 1, backgroundColor: Colors.background }}>
         <ProgressBar currentStep={step} />
         <GoalSettingStep
           selectedSkills={selectedSkills}

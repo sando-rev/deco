@@ -35,6 +35,7 @@ export interface Profile {
   default_match_day: number | null;
   push_token: string | null;
   notification_prefs: NotificationPrefs;
+  notifications_paused_until: string | null;
   onboarding_completed: boolean;
   language: 'nl' | 'en';
   created_at: string;
@@ -183,6 +184,14 @@ export interface ScheduledSession {
   reflection_id: string | null;
   notification_sent_pre: boolean;
   notification_sent_post: boolean;
+  training_goal_text?: string | null;
+  created_at: string;
+}
+
+export interface SessionGoal {
+  id: string;
+  session_id: string;
+  goal_id: string;
   created_at: string;
 }
 
@@ -200,6 +209,7 @@ export interface TeamMemberWithProfile extends TeamMember {
   selected_skills_count: number;
   active_goals_count: number;
   last_reflection_date: string | null;
+  active_goal_skills: string[];
 }
 
 export interface MatchDate {
@@ -208,6 +218,15 @@ export interface MatchDate {
   date: string;
   start_time: string | null;
   label: string | null;
+  created_at: string;
+}
+
+// Coach score feedback
+export interface CoachScoreFeedback {
+  id: string;
+  coach_id: string;
+  athlete_id: string;
+  feedback_text: string;
   created_at: string;
 }
 

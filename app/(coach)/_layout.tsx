@@ -43,6 +43,15 @@ export default function CoachLayout() {
         }}
       />
       <Tabs.Screen
+        name="reports"
+        options={{
+          title: t('tabs.reports'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="document-text" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="team"
         options={{
           title: t('tabs.team'),

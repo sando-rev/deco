@@ -4,10 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '../../src/constants/theme';
 import { useUnseenFeedbackCount } from '../../src/hooks/useGamification';
+import { useUnseenScoreFeedback } from '../../src/hooks/useTeam';
+import { useRealtimeCoachFeedback } from '../../src/hooks/useGoals';
 
 export default function AthleteLayout() {
   const { t } = useTranslation();
   const { data: unseenCount } = useUnseenFeedbackCount();
+  const { hasUnseen: hasUnseenScoreFeedback } = useUnseenScoreFeedback();
+  useRealtimeCoachFeedback();
 
   return (
     <Tabs
@@ -40,7 +44,12 @@ export default function AthleteLayout() {
         options={{
           title: t('tabs.profile'),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <View>
+              <Ionicons name="person" size={size} color={color} />
+              {hasUnseenScoreFeedback && (
+                <View style={styles.dot} />
+              )}
+            </View>
           ),
         }}
       />
@@ -89,7 +98,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -4,
     right: -8,
-    backgroundColor: Colors.error,
+    backgroundColor: '#F5A623',
     borderRadius: 9,
     minWidth: 18,
     height: 18,
@@ -103,5 +112,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: '#fff',
+  },
+  dot: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#F5A623',
+    borderWidth: 2,
+    borderColor: Colors.surface,
   },
 });
