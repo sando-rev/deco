@@ -5,10 +5,10 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const ATHLETE_EMAIL = 'test-playwright@deco.app';
 export const ATHLETE_PASSWORD = 'TestPass123!';
-export const ATHLETE_ID = 'a0000000-0000-0000-0000-000000000001';
+export const ATHLETE_ID = 'ec9e8787-2758-4edd-ab6d-556a8fb0931f';
 export const COACH_EMAIL = 'test-coach@deco.app';
 export const COACH_PASSWORD = 'TestPass123!';
-export const COACH_ID = 'c0000000-0000-0000-0000-000000000001';
+export const COACH_ID = 'e5c85ee2-705d-493f-acd2-476732a8db60';
 
 // Cache tokens to avoid rate limits
 const tokenCache = new Map<string, { token: string; expiresAt: number }>();
