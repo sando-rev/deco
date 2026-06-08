@@ -27,7 +27,8 @@ export const nl = {
     settings: 'Instellingen',
     players: 'Spelers',
     team: 'Team',
-    reports: 'Rapporten',
+    reports: 'Overzicht',
+    feed: 'Feed',
   },
 
   // Auth screens
@@ -46,6 +47,10 @@ export const nl = {
     fillAllFields: 'Vul alle velden in',
     signInFailed: 'Inloggen mislukt',
     signUpFailed: 'Registratie mislukt',
+    forgotPassword: 'Wachtwoord vergeten?',
+    enterEmailFirst: 'Vul eerst je e-mailadres in',
+    resetSent: 'E-mail verzonden',
+    resetSentMsg: 'Controleer je inbox voor een link om je wachtwoord te herstellen.',
     createAccount: 'Maak je account aan',
     fullName: 'Volledige naam',
     fullNamePlaceholder: 'Je naam',
@@ -109,6 +114,8 @@ export const nl = {
     leaderboardDesc: 'Bekijk hoe jij en je teamgenoten ervoor staan. Verdien XP door doelen te stellen, te reflecteren en je vaardigheden te ontwikkelen!',
     leaderboardNoTeam: 'Sluit je aan bij een team om de ranglijst te zien. Je kunt een teamcode invoeren bij Instellingen.',
     leaderboardEmpty: 'Er zijn nog geen teamgenoten. Zodra je team groeit, zie je hier de ranglijst!',
+    leaderboardJoinHint: 'Voer hier je teamcode in om een team te joinen, of doe dit later bij Instellingen.',
+    leaderboardJoinSuccess: 'Je bent lid geworden van het team!',
     deadline: 'Deadline',
     skillName: 'Naam vaardigheid',
     skillDescription: 'Beschrijving (optioneel)',
@@ -200,7 +207,10 @@ export const nl = {
     recentReflections: 'Recente reflecties',
     noReflections: 'Nog geen reflecties. Reflecteer na je volgende sessie!',
     howDidItGo: 'Hoe ging het?',
+    howDidItGoWithFocus: 'Je wilde werken aan {{focus}}. Hoe ging dat?',
     reflectSubtitle: 'Neem even de tijd om te reflecteren op je sessie.',
+    reflectSubtitleWithFocus: 'Beoordeel hoe het ging met je focuspunten.',
+    yourFocusPoints: 'Jouw focuspunten',
     sessionType: 'Sessietype',
     rateProgress: 'Beoordeel je voortgang per doel',
     noProgress: 'Geen vooruitgang',
@@ -294,6 +304,10 @@ export const nl = {
     twoWeeks: '2 weken',
     oneMonth: '1 maand',
     offSeason: 'Off-season',
+    outlierNotifications: 'Uitschieter meldingen',
+    outlierNotificationsDesc: 'Ontvang een melding bij extreem lage of hoge scores',
+    feedVisible: 'Zichtbaar in teamfeed',
+    feedVisibleDesc: 'Toon je mijlpalen in de teamfeed',
   },
 
   // Coach
@@ -333,21 +347,59 @@ export const nl = {
     recentActivity: 'Recente activiteit',
     noReflections: 'Nog geen reflecties',
     playerDetail: 'Spelersdetail',
+    viewPlayer: 'Speler bekijken',
   },
 
-  // Coach reports
-  reports: {
-    title: 'Weekrapporten',
-    newReport: 'Nieuw rapport',
+  // Weekly overview (replaces old reports)
+  overview: {
+    title: 'Weekoverzicht',
     weekOf: 'Week van {{date}}',
-    notesPlaceholder: 'Schrijf je rapport over de voortgang en focus van je spelers deze week...',
-    saveReport: 'Rapport opslaan',
-    noReports: 'Nog geen rapporten',
-    noReportsDesc: 'Elk weekend ontvang je een herinnering om een weekrapport in te vullen over de voortgang van je spelers.',
-    saved: 'Rapport opgeslagen',
-    editReport: 'Rapport bewerken',
-    deleteReport: 'Rapport verwijderen',
-    deleteConfirm: 'Weet je zeker dat je dit rapport wilt verwijderen?',
+    trainings: 'Trainingen',
+    reflections: 'Reflecties',
+    avgScore: 'Gem. score',
+    goodJob: 'Goed bezig',
+    respond: 'Reageer',
+    needsAttention: 'Aandacht nodig',
+    messagePlaceholder: 'Schrijf een kort bericht (max 280 tekens)...',
+    send: 'Verstuur',
+    noPlayers: 'Geen spelers in je team',
+    noPlayersDesc: 'Voeg spelers toe via de uitnodigingscode op het teamscherm.',
+    noActivity: 'Geen activiteit deze week',
+    coachRespondedGood: 'Je coach vindt dat je goed bezig bent!',
+    coachResponded: 'Je coach heeft gereageerd op je week',
+    settingsDay: 'Dag voor weekoverzicht',
+    settingsTime: 'Tijd voor herinnering',
+    unresolvedOutlier: 'Openstaande uitschieter',
+  },
+
+  // Outlier notifications
+  outlier: {
+    lowTitle: '{{name}} heeft een moeilijke training gehad',
+    highTitle: '{{name}} had een uitstekende training',
+    respond: 'Reageer',
+    unresolvedBadge: 'Openstaande uitschieter',
+  },
+
+  // Activity feed
+  feed: {
+    title: 'Teamfeed',
+    empty: 'Nog geen activiteit. Zodra je team actief wordt, verschijnen hier mijlpalen!',
+    reflectionStreak3: '{{name}} heeft 3 reflecties op rij!',
+    personalRecordWeek: '{{name}} heeft een persoonlijk record: {{count}} reflecties deze week!',
+    streak7Plus: '{{name}} heeft een streak van {{days}} dagen!',
+    goalAchieved: '{{name}} heeft een doel behaald: {{goal}}',
+    coachOverview: 'De coach heeft het weekoverzicht gepubliceerd',
+    coachAnnouncement: 'Bericht van de coach',
+    reactionNotification: '{{name}} reageerde op je mijlpaal!',
+    pinnedLabel: 'Vastgepind',
+    weeklySummary: 'Weekoverzicht',
+    mostActive: 'Meest actief: {{name}}',
+    biggestGrowth: 'Grootste groei: {{name}}',
+    teamAverage: 'Teamgemiddelde: {{score}}',
+    playersReflected: '{{count}} van {{total}} spelers hebben gereflecteerd',
+    summaryReady: 'Het weekoverzicht van je team is klaar!',
+    postAnnouncement: 'Bericht vastpinnen',
+    announcementPlaceholder: 'Schrijf een bericht voor je team...',
   },
 
   // Skills / Categories
@@ -466,6 +518,13 @@ export const nl = {
     top_3_team_desc: 'Bereik de top 3 op de teamranglijst',
     number_1_team: 'Nummer 1 in je team',
     number_1_team_desc: 'Bereik de nummer 1 plek op de teamranglijst',
+  },
+
+  // Notification permission banner
+  notificationBanner: {
+    title: 'Je mist meldingen',
+    body: 'Schakel notificaties in zodat je coach en je doelen je kunnen bereiken.',
+    action: 'Inschakelen',
   },
 
   // Notifications

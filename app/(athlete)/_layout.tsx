@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -5,15 +6,30 @@ import { useTranslation } from 'react-i18next';
 import { Colors } from '../../src/constants/theme';
 import { useUnseenFeedbackCount } from '../../src/hooks/useGamification';
 import { useUnseenScoreFeedback } from '../../src/hooks/useTeam';
-import { useRealtimeCoachFeedback } from '../../src/hooks/useGoals';
+import { useRealtimeCoachFeedback, useExpiredGoals } from '../../src/hooks/useGoals';
+import { useSessionPrompt } from '../../src/hooks/useSessionPrompt';
+import { useAutoRegenerateSessions } from '../../src/hooks/useSchedule';
+import { NotificationBanner } from '../../src/components/NotificationBanner';
+import { GoalDeadlineModal } from '../../src/components/GoalDeadlineModal';
 
 export default function AthleteLayout() {
   const { t } = useTranslation();
   const { data: unseenCount } = useUnseenFeedbackCount();
   const { hasUnseen: hasUnseenScoreFeedback } = useUnseenScoreFeedback();
+  const { data: expiredGoals } = useExpiredGoals();
+  const [expiredIndex, setExpiredIndex] = useState(0);
+  const [dismissedExpired, setDismissedExpired] = useState(false);
   useRealtimeCoachFeedback();
+  useSessionPrompt();
+  useAutoRegenerateSessions();
+
+  const currentExpired = !dismissedExpired && expiredGoals && expiredGoals.length > 0
+    ? expiredGoals[expiredIndex]
+    : null;
 
   return (
+    <>
+    <NotificationBanner />
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
@@ -81,6 +97,15 @@ export default function AthleteLayout() {
         }}
       />
       <Tabs.Screen
+        name="feed"
+        options={{
+          title: t('tabs.feed'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="newspaper" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: t('tabs.settings'),
@@ -90,6 +115,20 @@ export default function AthleteLayout() {
         }}
       />
     </Tabs>
+    {currentExpired && (
+      <GoalDeadlineModal
+        goal={currentExpired}
+        visible={true}
+        onDismiss={() => {
+          if (expiredGoals && expiredIndex < expiredGoals.length - 1) {
+            setExpiredIndex(expiredIndex + 1);
+          } else {
+            setDismissedExpired(true);
+          }
+        }}
+      />
+    )}
+    </>
   );
 }
 

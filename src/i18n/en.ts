@@ -27,7 +27,8 @@ export const en = {
     settings: 'Settings',
     players: 'Players',
     team: 'Team',
-    reports: 'Reports',
+    reports: 'Overview',
+    feed: 'Feed',
   },
 
   // Auth screens
@@ -46,6 +47,10 @@ export const en = {
     fillAllFields: 'Fill in all fields',
     signInFailed: 'Sign in failed',
     signUpFailed: 'Sign up failed',
+    forgotPassword: 'Forgot password?',
+    enterEmailFirst: 'Enter your email address first',
+    resetSent: 'Email sent',
+    resetSentMsg: 'Check your inbox for a link to reset your password.',
     createAccount: 'Create your account',
     fullName: 'Full name',
     fullNamePlaceholder: 'Your name',
@@ -109,6 +114,8 @@ export const en = {
     leaderboardDesc: 'See how you and your teammates stack up. Earn XP by setting goals, reflecting, and developing your skills!',
     leaderboardNoTeam: 'Join a team to see the leaderboard. You can enter a team code in Settings.',
     leaderboardEmpty: 'No teammates yet. As your team grows, you will see the leaderboard here!',
+    leaderboardJoinHint: 'Enter your team code here to join a team, or do this later in Settings.',
+    leaderboardJoinSuccess: 'You have joined the team!',
     deadline: 'Deadline',
     skillName: 'Skill name',
     skillDescription: 'Description (optional)',
@@ -200,7 +207,10 @@ export const en = {
     recentReflections: 'Recent reflections',
     noReflections: 'No reflections yet. Reflect after your next session!',
     howDidItGo: 'How did it go?',
+    howDidItGoWithFocus: 'You wanted to work on {{focus}}. How did it go?',
     reflectSubtitle: 'Take a moment to reflect on your session.',
+    reflectSubtitleWithFocus: 'Rate how it went with your focus points.',
+    yourFocusPoints: 'Your focus points',
     sessionType: 'Session type',
     rateProgress: 'Rate your progress per goal',
     noProgress: 'No progress',
@@ -294,6 +304,10 @@ export const en = {
     twoWeeks: '2 weeks',
     oneMonth: '1 month',
     offSeason: 'Off-season',
+    outlierNotifications: 'Outlier notifications',
+    outlierNotificationsDesc: 'Get notified for extremely low or high scores',
+    feedVisible: 'Visible in team feed',
+    feedVisibleDesc: 'Show your milestones in the team feed',
   },
 
   // Coach
@@ -333,21 +347,59 @@ export const en = {
     recentActivity: 'Recent activity',
     noReflections: 'No reflections yet',
     playerDetail: 'Player detail',
+    viewPlayer: 'View player',
   },
 
-  // Coach reports
-  reports: {
-    title: 'Weekly Reports',
-    newReport: 'New report',
+  // Weekly overview (replaces old reports)
+  overview: {
+    title: 'Weekly Overview',
     weekOf: 'Week of {{date}}',
-    notesPlaceholder: 'Write your report about the progress and focus of your players this week...',
-    saveReport: 'Save report',
-    noReports: 'No reports yet',
-    noReportsDesc: 'Every weekend you will receive a reminder to write a weekly report about the progress of your players.',
-    saved: 'Report saved',
-    editReport: 'Edit report',
-    deleteReport: 'Delete report',
-    deleteConfirm: 'Are you sure you want to delete this report?',
+    trainings: 'Trainings',
+    reflections: 'Reflections',
+    avgScore: 'Avg. score',
+    goodJob: 'Good job',
+    respond: 'Respond',
+    needsAttention: 'Needs attention',
+    messagePlaceholder: 'Write a short message (max 280 chars)...',
+    send: 'Send',
+    noPlayers: 'No players in your team',
+    noPlayersDesc: 'Add players via the invite code on the team screen.',
+    noActivity: 'No activity this week',
+    coachRespondedGood: 'Your coach thinks you\'re doing great!',
+    coachResponded: 'Your coach responded to your week',
+    settingsDay: 'Day for weekly overview',
+    settingsTime: 'Reminder time',
+    unresolvedOutlier: 'Unresolved outlier',
+  },
+
+  // Outlier notifications
+  outlier: {
+    lowTitle: '{{name}} had a tough session',
+    highTitle: '{{name}} had an excellent session',
+    respond: 'Respond',
+    unresolvedBadge: 'Unresolved outlier',
+  },
+
+  // Activity feed
+  feed: {
+    title: 'Team Feed',
+    empty: 'No activity yet. Team milestones will appear here!',
+    reflectionStreak3: '{{name}} completed 3 reflections in a row!',
+    personalRecordWeek: '{{name}} set a personal record: {{count}} reflections this week!',
+    streak7Plus: '{{name}} is on a {{days}}-day streak!',
+    goalAchieved: '{{name}} achieved a goal: {{goal}}',
+    coachOverview: 'The coach published the weekly overview',
+    coachAnnouncement: 'Message from the coach',
+    reactionNotification: '{{name}} reacted to your milestone!',
+    pinnedLabel: 'Pinned',
+    weeklySummary: 'Weekly Summary',
+    mostActive: 'Most active: {{name}}',
+    biggestGrowth: 'Biggest growth: {{name}}',
+    teamAverage: 'Team average: {{score}}',
+    playersReflected: '{{count}} of {{total}} players reflected',
+    summaryReady: 'Your team\'s weekly summary is ready!',
+    postAnnouncement: 'Pin announcement',
+    announcementPlaceholder: 'Write a message for your team...',
   },
 
   // Skills / Categories
@@ -466,6 +518,13 @@ export const en = {
     top_3_team_desc: 'Reach the top 3 on your team leaderboard',
     number_1_team: 'Number 1 in your team',
     number_1_team_desc: 'Reach the number 1 spot on your team leaderboard',
+  },
+
+  // Notification permission banner
+  notificationBanner: {
+    title: 'You\'re missing notifications',
+    body: 'Enable notifications so your coach and goals can reach you.',
+    action: 'Enable',
   },
 
   // Notifications

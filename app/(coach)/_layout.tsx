@@ -2,11 +2,14 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Colors } from '../../src/constants/theme';
+import { NotificationBanner } from '../../src/components/NotificationBanner';
 
 export default function CoachLayout() {
   const { t } = useTranslation();
 
   return (
+    <>
+    <NotificationBanner />
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
@@ -47,7 +50,7 @@ export default function CoachLayout() {
         options={{
           title: t('tabs.reports'),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text" size={size} color={color} />
+            <Ionicons name="clipboard-outline" size={size} color={color} />
           ),
         }}
       />
@@ -61,6 +64,15 @@ export default function CoachLayout() {
         }}
       />
       <Tabs.Screen
+        name="feed"
+        options={{
+          title: t('tabs.feed'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="newspaper" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: t('tabs.settings'),
@@ -70,5 +82,6 @@ export default function CoachLayout() {
         }}
       />
     </Tabs>
+    </>
   );
 }

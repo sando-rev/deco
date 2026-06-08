@@ -11,14 +11,14 @@ import { parseIcs } from '../../src/utils/icsParser';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useJoinTeam, useMyTeams } from '../../src/hooks/useTeam';
 import { useSavePosition, useSaveDefaultMatchDay, useSaveLanguage } from '../../src/hooks/useProfile';
-import { useMatchDates, useSaveMatchDate, useDeleteMatchDate } from '../../src/hooks/useSchedule';
+import { useTrainingSchedule, useSaveTrainingSchedule, useGenerateUpcomingSessions, useMatchDates, useSaveMatchDate, useDeleteMatchDate, useAddMatch } from '../../src/hooks/useSchedule';
 import { Button } from '../../src/components/ui/Button';
 import { Input } from '../../src/components/ui/Input';
 import { Card } from '../../src/components/ui/Card';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../src/constants/theme';
 import { supabase } from '../../src/services/supabase';
-import { NotificationPrefs, PositionType } from '../../src/types/database';
-import { DISPLAY_DAY_ORDER, DAY_LABELS } from '../../src/constants/skills';
+import { NotificationPrefs, PositionType, ScheduleSessionType, TrainingSchedule } from '../../src/types/database';
+import { DISPLAY_DAY_ORDER, DAY_LABELS, DAY_LABELS_FULL, dayOfWeekToDisplayIndex } from '../../src/constants/skills';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -28,12 +28,22 @@ export default function SettingsScreen() {
   const savePosition = useSavePosition();
   const saveDefaultMatchDay = useSaveDefaultMatchDay();
   const saveLanguage = useSaveLanguage();
+  const { data: trainingSchedule } = useTrainingSchedule();
+  const saveTrainingSchedule = useSaveTrainingSchedule();
+  const generateSessions = useGenerateUpcomingSessions();
   const { data: matchDates } = useMatchDates();
   const saveMatchDate = useSaveMatchDate();
   const deleteMatchDate = useDeleteMatchDate();
+  const addMatch = useAddMatch();
   const [inviteCode, setInviteCode] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showTrainingTimePicker, setShowTrainingTimePicker] = useState<{
+    day: number;
+    field: 'start' | 'end';
+  } | null>(null);
   const [pickerDate, setPickerDate] = useState(new Date());
+  const [pickerTime, setPickerTime] = useState<Date | null>(null);
 
   const notifPrefs = profile?.notification_prefs ?? {
     pre_training: true,
@@ -95,6 +105,70 @@ export default function SettingsScreen() {
     }
   };
 
+  // --- Training schedule helpers ---
+  const scheduleEntries = (trainingSchedule ?? []).map((s) => ({
+    day_of_week: s.day_of_week,
+    start_time: s.start_time,
+    end_time: s.end_time,
+    session_type: s.session_type as ScheduleSessionType,
+    label: s.label ?? 'Training',
+  }));
+
+  const sortedScheduleEntries = [...scheduleEntries].sort(
+    (a, b) => dayOfWeekToDisplayIndex(a.day_of_week) - dayOfWeekToDisplayIndex(b.day_of_week)
+  );
+
+  const saveSchedule = async (
+    entries: { day_of_week: number; start_time: string; end_time: string; session_type: ScheduleSessionType; label: string }[]
+  ) => {
+    try {
+      await saveTrainingSchedule.mutateAsync(entries);
+      // Re-fetch saved schedules to get real UUIDs for session generation
+      const { data: savedSchedules } = await supabase
+        .from('training_schedules')
+        .select('*')
+        .eq('athlete_id', profile!.id);
+      if (savedSchedules && savedSchedules.length > 0) {
+        await generateSessions.mutateAsync(savedSchedules as TrainingSchedule[]);
+      }
+    } catch (error: any) {
+      Alert.alert(t('common.error'), error.message);
+    }
+  };
+
+  const handleToggleTrainingDay = (dayOfWeek: number) => {
+    const existing = scheduleEntries.find((e) => e.day_of_week === dayOfWeek);
+    if (existing) {
+      saveSchedule(scheduleEntries.filter((e) => e.day_of_week !== dayOfWeek));
+    } else {
+      saveSchedule([
+        ...scheduleEntries,
+        { day_of_week: dayOfWeek, start_time: '18:00', end_time: '19:30', session_type: 'training', label: 'Training' },
+      ]);
+    }
+  };
+
+  const handleTrainingTimeChange = (_: any, date: Date | undefined) => {
+    if (Platform.OS !== 'ios') {
+      setShowTrainingTimePicker(null);
+    }
+    if (date && showTrainingTimePicker) {
+      const timeStr = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+      const field = showTrainingTimePicker.field === 'start' ? 'start_time' : 'end_time';
+      const updated = scheduleEntries.map((e) =>
+        e.day_of_week === showTrainingTimePicker.day ? { ...e, [field]: timeStr } : e
+      );
+      saveSchedule(updated);
+    }
+  };
+
+  const parseTimeStr = (time: string): Date => {
+    const [h, m] = time.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
+  };
+
   const handlePositionChange = (newPosition: PositionType) => {
     if (newPosition === profile?.position) return;
     Alert.alert(
@@ -114,10 +188,25 @@ export default function SettingsScreen() {
     saveDefaultMatchDay.mutateAsync(dayOfWeek);
   };
 
-  const handleAddMatchDate = async (date: Date) => {
+  const handleAddMatchDate = async (date: Date, startTime: Date) => {
     try {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const timeStr = format(startTime, 'HH:mm');
+      // Compute end_time as start_time + 3 hours for the scheduled session
+      const endTime = new Date(startTime);
+      endTime.setHours(endTime.getHours() + 3);
+      const endTimeStr = format(endTime, 'HH:mm');
+
       await saveMatchDate.mutateAsync({
-        date: format(date, 'yyyy-MM-dd'),
+        date: dateStr,
+        start_time: timeStr,
+      });
+
+      // Also create a scheduled session so notifications fire
+      await addMatch.mutateAsync({
+        date: dateStr,
+        start_time: timeStr,
+        end_time: endTimeStr,
       });
     } catch (error: any) {
       Alert.alert(t('common.error'), error.message);
@@ -214,6 +303,25 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(t('settings.deleteAccount'), t('settings.deleteAccountConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('settings.deleteAccountButton'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const { error } = await supabase.rpc('delete_my_account');
+            if (error) throw error;
+            await supabase.auth.signOut();
+          } catch (error: any) {
+            Alert.alert(t('common.error'), error.message);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Profile info */}
@@ -303,6 +411,67 @@ export default function SettingsScreen() {
         </View>
       </Card>
 
+      {/* Training schedule */}
+      <Text style={styles.sectionTitle}>{t('settings.trainingSchedule')}</Text>
+      <Card style={styles.matchCard}>
+        <Text style={styles.matchSubLabel}>{t('settings.selectDay')}</Text>
+        <View style={styles.chipsRow}>
+          {DISPLAY_DAY_ORDER.map((dayOfWeek) => {
+            const hasSession = scheduleEntries.some((e) => e.day_of_week === dayOfWeek);
+            return (
+              <TouchableOpacity
+                key={dayOfWeek}
+                style={[styles.dayChip, hasSession && styles.chipSelected]}
+                onPress={() => handleToggleTrainingDay(dayOfWeek)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: hasSession }}
+              >
+                <Text style={[styles.dayChipText, hasSession && styles.chipTextSelected]}>
+                  {DAY_LABELS[dayOfWeek]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {sortedScheduleEntries.map((entry) => (
+          <View key={entry.day_of_week} style={styles.trainingEntry}>
+            <Text style={styles.trainingEntryDay}>{DAY_LABELS_FULL[entry.day_of_week]}</Text>
+            <View style={styles.trainingTimeRow}>
+              <TouchableOpacity
+                style={styles.trainingTimeButton}
+                onPress={() => setShowTrainingTimePicker({ day: entry.day_of_week, field: 'start' })}
+              >
+                <Ionicons name="time-outline" size={14} color={Colors.primary} />
+                <Text style={styles.trainingTimeText}>{entry.start_time}</Text>
+              </TouchableOpacity>
+              <Text style={styles.trainingTimeSeparator}>—</Text>
+              <TouchableOpacity
+                style={styles.trainingTimeButton}
+                onPress={() => setShowTrainingTimePicker({ day: entry.day_of_week, field: 'end' })}
+              >
+                <Text style={styles.trainingTimeText}>{entry.end_time}</Text>
+              </TouchableOpacity>
+            </View>
+            {showTrainingTimePicker?.day === entry.day_of_week && (
+              <DateTimePicker
+                value={parseTimeStr(
+                  showTrainingTimePicker.field === 'start' ? entry.start_time : entry.end_time
+                )}
+                mode="time"
+                is24Hour={true}
+                minuteInterval={5}
+                onChange={handleTrainingTimeChange}
+              />
+            )}
+          </View>
+        ))}
+
+        {scheduleEntries.length === 0 && (
+          <Text style={styles.noMatchDates}>{t('settings.noTrainings')}</Text>
+        )}
+      </Card>
+
       {/* Match schedule */}
       <Text style={styles.sectionTitle}>{t('settings.matches')}</Text>
       <Card style={styles.matchCard}>
@@ -385,12 +554,39 @@ export default function SettingsScreen() {
             }
             if (event.type === 'set' && selectedDate) {
               setPickerDate(selectedDate);
-              handleAddMatchDate(selectedDate);
               if (Platform.OS === 'ios') {
                 setShowDatePicker(false);
               }
+              // After date selection, show time picker
+              const defaultTime = new Date();
+              defaultTime.setHours(10, 0, 0, 0);
+              setPickerTime(defaultTime);
+              setShowTimePicker(true);
             } else if (event.type === 'dismissed') {
               setShowDatePicker(false);
+            }
+          }}
+        />
+      )}
+
+      {showTimePicker && (
+        <DateTimePicker
+          value={pickerTime ?? new Date()}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          minuteInterval={5}
+          onChange={(event, selectedTime) => {
+            if (Platform.OS === 'android') {
+              setShowTimePicker(false);
+            }
+            if (event.type === 'set' && selectedTime) {
+              setPickerTime(selectedTime);
+              handleAddMatchDate(pickerDate, selectedTime);
+              if (Platform.OS === 'ios') {
+                setShowTimePicker(false);
+              }
+            } else if (event.type === 'dismissed') {
+              setShowTimePicker(false);
             }
           }}
         />
@@ -426,6 +622,24 @@ export default function SettingsScreen() {
         />
       </View>
 
+      {/* Feed visibility */}
+      <Card style={styles.notifCard} padding={Spacing.md}>
+        <View style={styles.notifRow}>
+          <View style={styles.notifInfo}>
+            <Text style={styles.notifLabel}>{t('settings.feedVisible')}</Text>
+            <Text style={styles.notifDesc}>{t('settings.feedVisibleDesc')}</Text>
+          </View>
+          <Switch
+            value={(profile as any)?.feed_visible ?? true}
+            onValueChange={async (value) => {
+              await supabase.from('profiles').update({ feed_visible: value }).eq('id', profile!.id);
+              refreshProfile();
+            }}
+            trackColor={{ true: Colors.primary, false: Colors.border }}
+          />
+        </View>
+      </Card>
+
       {/* Sign out */}
       <Button
         title={t('settings.signOut')}
@@ -434,6 +648,16 @@ export default function SettingsScreen() {
         style={styles.signOutButton}
         icon={<Ionicons name="log-out-outline" size={18} color={Colors.primary} />}
       />
+
+      {/* Delete account */}
+      <TouchableOpacity
+        onPress={handleDeleteAccount}
+        style={styles.deleteAccountButton}
+        accessibilityRole="button"
+        accessibilityLabel={t('settings.deleteAccount')}
+      >
+        <Text style={styles.deleteAccountText}>{t('settings.deleteAccount')}</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -633,7 +857,52 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginBottom: Spacing.xl,
   },
+  trainingEntry: {
+    marginTop: Spacing.md,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  trainingEntryDay: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  trainingTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  trainingTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary + '10',
+  },
+  trainingTimeText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  trainingTimeSeparator: {
+    fontSize: FontSize.sm,
+    color: Colors.textTertiary,
+  },
   signOutButton: {
     marginTop: Spacing.xl,
+  },
+  deleteAccountButton: {
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  deleteAccountText: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.error ?? '#E53E3E',
   },
 });

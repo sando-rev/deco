@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,32 +6,86 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import Slider from '@react-native-community/slider';
 import { Input } from '../../../src/components/ui/Input';
 import { Button } from '../../../src/components/ui/Button';
 import { Card } from '../../../src/components/ui/Card';
-import { useGoals } from '../../../src/hooks/useGoals';
 import { useCreateReflection } from '../../../src/hooks/useReflections';
 import { useSkillDefinitions } from '../../../src/hooks/useSkills';
+import { useSessionGoals, useScheduledSession } from '../../../src/hooks/useSchedule';
+import { XP_VALUES, calculateReflectionQualityBonus } from '../../../src/hooks/useGamification';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
-import { SessionType } from '../../../src/types/database';
-import { Celebration } from '../../../src/components/Celebration';
+import { SessionType, Goal } from '../../../src/types/database';
+import { useCelebration } from '../../../src/components/CelebrationContext';
+
+const GOLD = '#F5A623';
+const STAR_SIZE = 32;
+
+// StarRating renders 5 tappable stars. value = 0 means nothing selected yet.
+function StarRating({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <View style={starStyles.row} accessibilityRole="adjustable" accessibilityLabel={`Beoordeling: ${value} van 5`}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <TouchableOpacity
+          key={star}
+          onPress={() => onChange(star)}
+          hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+          accessibilityRole="button"
+          accessibilityLabel={`${star} ster`}
+        >
+          <Ionicons
+            name={star <= value ? 'star' : 'star-outline'}
+            size={STAR_SIZE}
+            color={star <= value ? GOLD : Colors.border}
+          />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+const starStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+});
 
 export default function ReflectScreen() {
   const router = useRouter();
+  const { sessionId } = useLocalSearchParams<{ sessionId?: string }>();
   const { t } = useTranslation();
-  const { data: activeGoals } = useGoals(undefined, 'active');
   const { data: skillDefs } = useSkillDefinitions();
+  const { data: sessionGoals } = useSessionGoals(sessionId);
+  const { data: session } = useScheduledSession(sessionId);
   const createReflection = useCreateReflection();
 
-  const [sessionType, setSessionType] = useState<SessionType>('training');
   const [notes, setNotes] = useState('');
   const [goalRatings, setGoalRatings] = useState<Record<string, number>>({});
-  const [showCelebration, setShowCelebration] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const { celebrate } = useCelebration();
+
+  // Auto-detect session type from the linked session; fall back to 'training'
+  const sessionType: SessionType = (session?.session_type as SessionType) ?? 'training';
+
+  // Only show pre-selected focus goals for this session
+  const focusGoals = useMemo(() => {
+    if (!sessionGoals || sessionGoals.length === 0) return [];
+    return sessionGoals as (typeof sessionGoals[number] & { goal: Goal })[];
+  }, [sessionGoals]);
 
   const getSkillLabel = (goal: any) => {
     if (goal.skill_id && skillDefs) {
@@ -55,113 +109,124 @@ export default function ReflectScreen() {
         notes: notes.trim() || null,
         goal_ratings: ratings,
       });
-      const hasHighRating = ratings.some((r) => r.rating >= 8);
+
+      // Calculate XP earned
+      const baseXp = XP_VALUES.reflection;
+      const qualityBonus = calculateReflectionQualityBonus(notes.trim() || null, ratings.length);
+      const totalXp = baseXp + qualityBonus;
+      const reason = qualityBonus > 0
+        ? t('gamification.xpReasonQualityBonus', { points: qualityBonus })
+        : t('gamification.xpReasonReflection');
+
+      celebrate({
+        type: 'xp',
+        message: t('gamification.xpEarned', { points: totalXp }),
+        subMessage: reason,
+        xpAmount: totalXp,
+      });
+
+      // Threshold on 5-star scale: >= 4 stars counts as a high score
+      const hasHighRating = ratings.some((r) => r.rating >= 4);
       if (hasHighRating) {
-        setShowCelebration(true);
-      } else {
-        router.back();
+        celebrate({
+          type: 'xp',
+          message: t('development.celebrationHighScore'),
+          icon: 'star',
+        });
       }
+
+      router.replace('/(athlete)/development/');
     } catch (error: any) {
       Alert.alert(t('common.error'), error.message);
     }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{t('development.howDidItGo')}</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+    >
+    <ScrollView
+      ref={scrollRef}
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+    >
+      <Text style={styles.title}>
+        {focusGoals.length > 0
+          ? t('development.howDidItGoWithFocus', { focus: (focusGoals[0].goal as Goal).title })
+          : t('development.howDidItGo')}
+      </Text>
       <Text style={styles.subtitle}>
-        {t('development.reflectSubtitle')}
+        {focusGoals.length > 0
+          ? t('development.reflectSubtitleWithFocus')
+          : t('development.reflectSubtitle')}
       </Text>
 
-      {/* Session type selector */}
-      <Text style={styles.label}>{t('development.sessionType')}</Text>
-      <View style={styles.typeRow}>
-        <TouchableOpacity
-          style={[
-            styles.typeButton,
-            sessionType === 'training' && styles.typeButtonActive,
-          ]}
-          onPress={() => setSessionType('training')}
-        >
-          <Ionicons
-            name="barbell-outline"
-            size={20}
-            color={sessionType === 'training' ? Colors.white : Colors.textSecondary}
-          />
-          <Text
-            style={[
-              styles.typeText,
-              sessionType === 'training' && styles.typeTextActive,
-            ]}
-          >
-            {t('common.training')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.typeButton,
-            sessionType === 'match' && styles.typeButtonActive,
-          ]}
-          onPress={() => setSessionType('match')}
-        >
-          <Ionicons
-            name="trophy-outline"
-            size={20}
-            color={sessionType === 'match' ? Colors.white : Colors.textSecondary}
-          />
-          <Text
-            style={[
-              styles.typeText,
-              sessionType === 'match' && styles.typeTextActive,
-            ]}
-          >
-            {t('common.match')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Rate each active goal */}
-      {activeGoals && activeGoals.length > 0 && (
-        <>
-          <Text style={styles.label}>{t('development.rateProgress')}</Text>
-          {activeGoals.map((goal) => {
+      {/* Focus point recap card */}
+      {focusGoals.length > 0 && (
+        <View style={styles.focusRecapCard}>
+          <View style={styles.focusRecapHeader}>
+            <Ionicons name="flag" size={18} color={Colors.primary} />
+            <Text style={styles.focusRecapLabel}>{t('development.yourFocusPoints')}</Text>
+          </View>
+          {session?.training_goal_text && (
+            <Text style={styles.trainingGoalText}>{session.training_goal_text}</Text>
+          )}
+          {focusGoals.map((sg) => {
+            const goal = sg.goal as Goal;
+            if (!goal) return null;
             const skillLabel = getSkillLabel(goal);
-            const rating = goalRatings[goal.id] ?? 5;
             return (
-              <Card key={goal.id} style={styles.goalRatingCard} padding={Spacing.md}>
-                <View style={styles.goalHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.goalTitle} numberOfLines={1}>
-                      {goal.title}
-                    </Text>
-                    {skillLabel && <Text style={styles.goalAttr}>{skillLabel}</Text>}
-                  </View>
-                  <View style={styles.ratingBadge}>
-                    <Text style={styles.ratingText}>{rating}</Text>
-                  </View>
+              <View key={goal.id} style={styles.focusRecapGoal}>
+                <Ionicons name="checkmark-circle" size={16} color={Colors.primary} style={{ marginTop: 2 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.focusRecapGoalTitle}>{goal.title}</Text>
+                  {skillLabel && <Text style={styles.goalAttr}>{skillLabel}</Text>}
                 </View>
-                <Slider
-                  style={styles.slider}
-                  minimumValue={1}
-                  maximumValue={10}
-                  step={1}
-                  value={rating}
-                  onValueChange={(v) =>
-                    setGoalRatings((prev) => ({ ...prev, [goal.id]: Math.round(v) }))
-                  }
-                  minimumTrackTintColor={Colors.primary}
-                  maximumTrackTintColor={Colors.border}
-                  thumbTintColor={Colors.primary}
-                />
-                <View style={styles.sliderLabels}>
-                  <Text style={styles.sliderLabel}>{t('development.noProgress')}</Text>
-                  <Text style={styles.sliderLabel}>{t('development.greatProgress')}</Text>
-                </View>
-              </Card>
+              </View>
             );
           })}
-        </>
+        </View>
       )}
+
+      {/* Rate each focus goal */}
+      {focusGoals.length > 0 && focusGoals.map((sg) => {
+        const goal = sg.goal as Goal;
+        if (!goal) return null;
+        const skillLabel = getSkillLabel(goal);
+        const rating = goalRatings[goal.id] ?? 0;
+        return (
+          <Card
+            key={goal.id}
+            style={styles.goalRatingCard}
+            padding={Spacing.md}
+          >
+            <View style={styles.goalTitleRow}>
+              <Ionicons
+                name="star"
+                size={14}
+                color={Colors.primary}
+                style={{ marginRight: 4, marginTop: 2 }}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.goalTitle} numberOfLines={2}>
+                  {goal.title}
+                </Text>
+                {skillLabel && <Text style={styles.goalAttr}>{skillLabel}</Text>}
+              </View>
+            </View>
+            <StarRating
+              value={rating}
+              onChange={(v) =>
+                setGoalRatings((prev) => ({ ...prev, [goal.id]: v }))
+              }
+            />
+          </Card>
+        );
+      })}
 
       {/* Notes */}
       <Input
@@ -172,6 +237,7 @@ export default function ReflectScreen() {
         multiline
         numberOfLines={4}
         style={{ minHeight: 100, textAlignVertical: 'top' }}
+        onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)}
       />
 
       <Button
@@ -181,15 +247,8 @@ export default function ReflectScreen() {
         size="lg"
         style={styles.submitButton}
       />
-      <Celebration
-        visible={showCelebration}
-        message={t('development.celebrationHighScore')}
-        onDismiss={() => {
-          setShowCelebration(false);
-          router.back();
-        }}
-      />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -213,48 +272,50 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: Spacing.lg,
   },
-  label: {
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  typeRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
+  focusRecapCard: {
+    backgroundColor: Colors.primary + '15',
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.primary,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
     marginBottom: Spacing.lg,
   },
-  typeButton: {
-    flex: 1,
+  focusRecapHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.surfaceSecondary,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
-  typeButtonActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+  focusRecapLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.primary,
   },
-  typeText: {
+  focusRecapGoal: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  focusRecapGoalTitle: {
     fontSize: FontSize.md,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: Colors.text,
   },
-  typeTextActive: {
-    color: Colors.white,
+  trainingGoalText: {
+    fontSize: FontSize.md,
+    color: Colors.text,
+    lineHeight: 22,
+    marginBottom: Spacing.xs,
   },
   goalRatingCard: {
     marginBottom: Spacing.md,
+    borderWidth: 1.5,
+    borderColor: Colors.primary + '40',
   },
-  goalHeader: {
+  goalTitleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
+    alignItems: 'flex-start',
   },
   goalTitle: {
     fontSize: FontSize.md,
@@ -264,32 +325,7 @@ const styles = StyleSheet.create({
   goalAttr: {
     fontSize: FontSize.xs,
     color: Colors.textTertiary,
-  },
-  ratingBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: Spacing.sm,
-  },
-  ratingText: {
-    color: Colors.white,
-    fontSize: FontSize.md,
-    fontWeight: '700',
-  },
-  slider: {
-    width: '100%',
-    height: 30,
-  },
-  sliderLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  sliderLabel: {
-    fontSize: 10,
-    color: Colors.textTertiary,
+    marginTop: 2,
   },
   submitButton: {
     marginTop: Spacing.lg,
