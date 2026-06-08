@@ -1,54 +1,73 @@
 # Deco
 
-A field hockey development app that helps athletes track skills, set goals, and reflect on training — while giving coaches visibility into their team's progress.
+A field hockey development coaching app that helps athletes track skills, set goals, and reflect on training — while giving coaches visibility into their team's progress.
 
 ## Download
 
-**[Download for Android (v1.2.0)](https://github.com/sando-rev/deco/releases/download/v1.2.0/deco-v1.2.0.apk)**
+**[Download for Android (v2.3.1)](https://github.com/sando-rev/deco/releases/download/v2.3.1/deco-v2.3.1.apk)**
 
-iOS coming soon.
+iOS build in progress.
 
-Landing page: [landing-weld-chi-78.vercel.app](https://landing-weld-chi-78.vercel.app)
+Website: [decotraining.com](https://decotraining.com)
 
 ## Features
 
 ### Athletes
-- **Skill Selection** — Choose from 30+ field hockey skills across 4 categories (Technical, Tactical, Physical, Mental)
-- **Dynamic Radar Chart** — Visualize your skill scores on a radar chart that adapts to your selected skills
-- **AI Goal Setting** — Write a development goal and get AI feedback on specificity, measurability, and challenge level
-- **Training Schedule** — Set up your weekly schedule (training, matches, gym) with smart notifications
-- **Session Reflections** — Log reflections after training and rate progress toward your goals
-- **Development Timeline** — Track sessions, reflections, and skill progression over time
+- **Skill Radar** — Choose from 30+ field hockey skills across 4 categories (Technical, Tactical, Physical, Mental) and visualize scores on a radar chart
+- **AI Goal Setting** — Write development goals and get AI feedback on specificity, measurability, and challenge level
+- **Session Goals** — Set focus goals before each training or match
+- **Reflections** — Rate progress with 1-5 stars after each session
+- **Training Schedule** — Set up weekly schedule with smart pre/post-training notifications
+- **Gamification** — Earn XP, unlock achievements, climb the team leaderboard
+- **Session Prompt** — App automatically prompts for goals or reflection based on your schedule
 
 ### Coaches
-- **Team Management** — Create a team and share an invite code with athletes
+- **Team Management** — Create teams with invite codes
 - **Player Overview** — View each athlete's radar chart, goals, and recent activity
 - **Goal Feedback** — Leave comments and thumbs-up on athlete goals
+- **Weekly Reports** — Rate player progress (thumbs up/neutral/down) with notes
+- **Score Feedback** — Assess player skill scores
+
+### Admin Dashboard
+- **Analytics** — Overview, users, engagement, gamification, coaches, training, funnel, goal insights, power users
+- **Notifications** — Send push notifications to users, manage notification templates
+- **App Store Tools** — Screenshot generator, feature graphic generator
+- **Brand Key** — Branding assets
 
 ## Tech Stack
 
-- **Frontend**: React Native (Expo SDK 55) with Expo Router
+- **App**: React Native (Expo SDK 55) with Expo Router
 - **Backend**: Supabase (PostgreSQL, Auth, Edge Functions, Row Level Security)
 - **AI**: Anthropic Claude Haiku via Supabase Edge Function for goal analysis
+- **Notifications**: Expo Push API + pg_cron for scheduled delivery
 - **State Management**: TanStack React Query
-- **Landing Page**: Next.js on Vercel
+- **Landing Page**: Next.js 16 + Tailwind CSS 4 on Vercel
+- **Testing**: Playwright (database-level tests)
+- **OTA Updates**: EAS Update
 
 ## Project Structure
 
 ```
 app/
-  (auth)/          # Sign in, sign up, onboarding
-  (athlete)/       # Athlete screens (profile, goals, development, settings)
-  (coach)/         # Coach screens (team, players, settings)
+  (auth)/              # Sign in, sign up, onboarding (11 steps)
+  (athlete)/           # Athlete tabs (profile, goals, development, settings)
+  (coach)/             # Coach tabs (players, team, reports, settings)
 src/
-  components/      # Shared components (RadarChart, GoalCard, GoalAnalysisCard)
-  constants/       # Theme, skill categories
-  hooks/           # Data hooks (useAuth, useGoals, useSkills, useSchedule, useTeam)
-  services/        # Supabase client, AI service
-  types/           # TypeScript database types
+  components/          # Shared components (RadarChart, GoalCard, CelebrationOverlay)
+  constants/           # Theme, skill categories
+  hooks/               # Data hooks (useAuth, useGoals, useSkills, useSchedule, useNotifications, useSessionPrompt)
+  services/            # Supabase client
+  i18n/                # Dutch + English translations
+  types/               # TypeScript database types
 supabase/
-  functions/       # Edge functions (goal-feedback)
-landing/           # Next.js landing page
+  functions/           # Edge functions (goal-feedback, send-notifications)
+  migrations/          # Database migrations
+landing/               # Next.js landing page + admin dashboard
+  app/admin/           # Admin dashboard (analytics, notifications, app store tools)
+  app/blog/            # SEO blog (10 Dutch articles)
+  components/          # Landing page + admin components
+tests/                 # Playwright test suites
+docs/                  # Admin rebuild prompt
 ```
 
 ## Development
@@ -64,12 +83,45 @@ npm install
 npx expo start
 ```
 
-### Build APK
+### Build Android APK
 ```bash
-eas build --platform android --profile preview --local
+ANDROID_HOME=~/Library/Android/sdk npx eas build --platform android --profile preview --local --output ./deco.apk --non-interactive
 ```
 
-### Environment
-The app connects to a Supabase project. The Supabase URL and anon key are configured in `src/services/supabase.ts`.
+### Build Android AAB (Play Store)
+```bash
+ANDROID_HOME=~/Library/Android/sdk npx eas build --platform android --profile production --local --output ./deco.aab --non-interactive
+```
 
-The `goal-feedback` edge function requires an `ANTHROPIC_API_KEY` secret set in Supabase.
+### Build iOS (App Store)
+```bash
+EXPO_APPLE_TEAM_ID=Q2L43947K2 npx eas build --platform ios --profile ios-production
+```
+
+### OTA Update
+```bash
+CI=1 npx eas update --branch preview --message "description" --platform android
+```
+
+### Deploy Landing Page
+```bash
+cd landing && npx vercel --prod --yes
+```
+
+### Deploy Edge Functions
+```bash
+npx supabase functions deploy send-notifications --project-ref hjbzknaionxkdkiowcch
+npx supabase functions deploy goal-feedback --project-ref hjbzknaionxkdkiowcch
+```
+
+### Run Tests
+```bash
+npx playwright test
+```
+
+## Environment
+
+- **Supabase**: URL and anon key in `src/services/supabase.ts`
+- **Edge functions**: `ANTHROPIC_API_KEY` secret in Supabase (stored as `deco`)
+- **Vercel**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- **EAS**: Project ID `1d4ac95d-3bd4-4fc4-aa17-2df95e766acc`

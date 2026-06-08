@@ -14,24 +14,20 @@ function AthleteProfileScreen() {
         Welkom terug, Sarah
       </div>
       <div className="text-[8px] text-[#6B7280] mb-2">
-        Jouw prestatieprofiel
+        Jouw vaardigheidsprofiel
       </div>
       <div className="bg-white rounded-xl p-2 mb-2 flex justify-center">
         <RadarChartWeb size={140} />
       </div>
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-2 gap-1.5">
         {[
-          { l: "DRI", v: 8 },
-          { l: "PAS", v: 6 },
-          { l: "SHO", v: 9 },
-          { l: "DEF", v: 5 },
-          { l: "FIT", v: 7 },
-          { l: "INS", v: 4 },
-          { l: "COM", v: 8 },
-          { l: "MEN", v: 6 },
+          { l: "Technisch", v: "7.5", color: "#1B6B4A" },
+          { l: "Tactisch", v: "6.8", color: "#2563EB" },
+          { l: "Fysiek", v: "8.2", color: "#D97706" },
+          { l: "Mentaal", v: "6.0", color: "#7C3AED" },
         ].map((s) => (
-          <div key={s.l} className="bg-white rounded-lg py-1.5 text-center">
-            <div className="text-xs font-extrabold text-[#1A1A2E]">{s.v}</div>
+          <div key={s.l} className="bg-white rounded-lg py-1.5 px-2">
+            <div className="text-xs font-extrabold" style={{ color: s.color }}>{s.v}</div>
             <div className="text-[7px] text-[#6B7280]">{s.l}</div>
           </div>
         ))}
@@ -335,8 +331,8 @@ export function ScreenshotGallery({ activeRole }: ScreenshotGalleryProps) {
   const screens =
     activeRole === "athlete"
       ? [
-          { comp: <AthleteProfileScreen />, label: "Vaardigheidsprofiel" },
-          { comp: <AthleteGoalsScreen />, label: "Slimme doelen" },
+          { comp: <AthleteProfileScreen />, label: "Jouw profiel" },
+          { comp: <AthleteGoalsScreen />, label: "Doelen & AI-feedback" },
           { comp: <AthleteDevelopmentScreen />, label: "XP & Ranglijst" },
         ]
       : [

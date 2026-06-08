@@ -2,7 +2,7 @@
   "expo": {
     "name": "Deco",
     "slug": "deco",
-    "version": "2.2.0",
+    "version": "2.2.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "deco",
@@ -14,7 +14,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.decotraining.app"
+      "bundleIdentifier": "com.decotraining.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Deco has geen toegang tot je camera nodig.",
+        "NSPhotoLibraryUsageDescription": "Deco has geen toegang tot je foto's nodig.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "googleServicesFile": "./google-services.json",
@@ -40,8 +45,15 @@
           "icon": "./assets/images/icon.png",
           "color": "#1B6B4A"
         }
-      ]
+      ],
+      "expo-updates"
     ],
+    "updates": {
+      "url": "https://u.expo.dev/1d4ac95d-3bd4-4fc4-aa17-2df95e766acc"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "experiments": {
       "typedRoutes": true
     },

@@ -67,11 +67,6 @@ export function GoalCard({ goal, onPress, showAiFeedback = false, coachView = fa
         </View>
 
         <Text style={styles.title}>{goal.title}</Text>
-        {goal.description && (
-          <Text style={styles.description} numberOfLines={2}>
-            {goal.description}
-          </Text>
-        )}
 
         <View style={styles.footer}>
           {goal.status === 'achieved' && goal.score_improvement ? (
@@ -80,11 +75,6 @@ export function GoalCard({ goal, onPress, showAiFeedback = false, coachView = fa
               <Text style={[styles.footerText, { color: Colors.success, fontWeight: '600' }]}>
                 +{goal.score_improvement} {t('goals.improvement').toLowerCase()}
               </Text>
-            </View>
-          ) : skillLabel ? (
-            <View style={styles.targetContainer}>
-              <Ionicons name="flag-outline" size={14} color={Colors.textSecondary} />
-              <Text style={styles.footerText}>{skillLabel}</Text>
             </View>
           ) : (
             <View />
@@ -122,27 +112,15 @@ export function GoalCard({ goal, onPress, showAiFeedback = false, coachView = fa
           </View>
         )}
 
-        {coachFeedback && coachFeedback.count > 0 && (
-          <View style={styles.coachFeedback}>
-            <View style={styles.coachHeader}>
-              {coachFeedback.hasThumbsUp && (
-                <Ionicons name="thumbs-up" size={14} color={Colors.primary} />
-              )}
-              <Ionicons name="chatbubble" size={14} color={Colors.primary} />
-              <Text style={styles.coachLabel}>{t('goals.coachFeedback')}</Text>
-              {coachFeedback.unseenCount > 0 && (
-                <View style={styles.unseenBadge}>
-                  <Text style={styles.unseenText}>{coachFeedback.unseenCount}</Text>
-                </View>
-              )}
-            </View>
-            {coachFeedback.latestComment && (
-              <Text style={styles.coachComment} numberOfLines={2}>
-                {coachFeedback.latestComment}
-              </Text>
-            )}
+        {coachFeedback && coachFeedback.unseenCount > 0 ? (
+          <View style={styles.unseenDot}>
+            <Text style={styles.unseenDotText}>{coachFeedback.unseenCount}</Text>
           </View>
-        )}
+        ) : coachFeedback && coachFeedback.hasThumbsUp ? (
+          <View style={styles.coachThumbsUp}>
+            <Ionicons name="thumbs-up" size={16} color={Colors.primary} />
+          </View>
+        ) : null}
       </Card>
     </TouchableOpacity>
   );
@@ -238,44 +216,26 @@ const styles = StyleSheet.create({
     color: Colors.text,
     lineHeight: 20,
   },
-  coachFeedback: {
-    marginTop: Spacing.md,
-    padding: Spacing.md,
-    backgroundColor: Colors.primary + '08',
-    borderRadius: BorderRadius.sm,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.primary,
+  coachThumbsUp: {
+    position: 'absolute',
+    top: Spacing.sm,
+    right: Spacing.sm,
   },
-  coachHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: Spacing.xs,
-  },
-  coachLabel: {
-    fontSize: FontSize.xs,
-    fontWeight: '700',
-    color: Colors.primary,
-    flex: 1,
-  },
-  unseenBadge: {
-    backgroundColor: Colors.error,
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
+  unseenDot: {
+    position: 'absolute',
+    top: Spacing.sm,
+    right: Spacing.sm,
+    backgroundColor: '#F5A623',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
-  unseenText: {
-    fontSize: 10,
-    fontWeight: '800',
+  unseenDotText: {
     color: '#fff',
-  },
-  coachComment: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-    fontStyle: 'italic',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

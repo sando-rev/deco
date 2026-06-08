@@ -16,12 +16,20 @@ export function Navbar() {
             Deco
           </span>
         </div>
-        <a
-          href="#download"
-          className="bg-deco-primary text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-deco-primary-dark transition-colors"
-        >
-          Download de app
-        </a>
+        <div className="flex items-center gap-5">
+          <a
+            href="/blog"
+            className="text-sm font-semibold text-deco-text-secondary hover:text-deco-primary transition-colors"
+          >
+            Blog
+          </a>
+          <a
+            href="#download"
+            className="bg-deco-primary text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-deco-primary-dark transition-colors"
+          >
+            Download de app
+          </a>
+        </div>
       </div>
     </nav>
   );

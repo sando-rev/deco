@@ -29,6 +29,7 @@ import { SKILL_CATEGORIES, DAY_LABELS, DAY_LABELS_FULL, DISPLAY_DAY_ORDER, dayOf
 import { Colors, Spacing, FontSize, BorderRadius } from '../../src/constants/theme';
 import { PositionType, SkillCategory, SkillDefinition, SkillPositionType, ScheduleSessionType, TrainingSchedule } from '../../src/types/database';
 import { supabase } from '../../src/services/supabase';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCreateGoal, useGetGoalFeedback } from '../../src/hooks/useGoals';
 import { useMyTeams } from '../../src/hooks/useTeam';
 import { useTeamLeaderboard, useCheckAchievements, useGoalStats, useAwardXp, XP_VALUES, calculateGoalQualityBonus } from '../../src/hooks/useGamification';
@@ -46,11 +47,11 @@ type OnboardingStep =
   | 'tactical'
   | 'physical'
   | 'mental'
-  | 'notifications'
-  | 'schedule'
   | 'scoring'
   | 'goal'
-  | 'leaderboard';
+  | 'leaderboard'
+  | 'schedule'
+  | 'notifications';
 
 const STEP_ORDER: OnboardingStep[] = [
   'welcome',
@@ -59,11 +60,11 @@ const STEP_ORDER: OnboardingStep[] = [
   'tactical',
   'physical',
   'mental',
-  'notifications',
-  'schedule',
   'scoring',
   'goal',
   'leaderboard',
+  'schedule',
+  'notifications',
 ];
 
 export default function Onboarding() {
@@ -453,6 +454,9 @@ function SkillSelectionStep({
         <Text style={styles.description}>
           {category.description}
         </Text>
+        <Text style={skillSelectionSubtitleStyle}>
+          Kies wat voor jouw positie of speelstijl belangrijk is
+        </Text>
         <View style={styles.selectionCounter}>
           <Text style={[styles.counterText, canContinue && styles.counterTextValid]}>
             {t('onboarding.selectionCount', { count: selectedCount, min: category.minSelection, max: category.maxSelection })}
@@ -567,6 +571,15 @@ function SkillSelectionStep({
     </ScrollView>
   );
 }
+
+const skillSelectionSubtitleStyle = {
+  fontSize: FontSize.sm,
+  color: Colors.textTertiary,
+  textAlign: 'center' as const,
+  lineHeight: 20,
+  marginTop: Spacing.xs,
+  fontStyle: 'italic' as const,
+};
 
 const customSkillStyles = StyleSheet.create({
   addButton: {
@@ -1771,31 +1784,6 @@ function AthleteOnboarding() {
     );
   }
 
-  if (step === 'notifications') {
-    return (
-      <View key={step} style={{ flex: 1, backgroundColor: Colors.background }}>
-        <ProgressBar currentStep={step} />
-        <NotificationStep onContinue={goForward} onBack={goBack} />
-      </View>
-    );
-  }
-
-  if (step === 'schedule') {
-    return (
-      <View key={step} style={{ flex: 1, backgroundColor: Colors.background }}>
-        <ProgressBar currentStep={step} />
-        <ScheduleStep
-          onContinue={goForward}
-          onBack={goBack}
-          scheduleEntries={scheduleEntries}
-          setScheduleEntries={setScheduleEntries}
-          defaultMatchDay={defaultMatchDay}
-          setDefaultMatchDay={setDefaultMatchDay}
-        />
-      </View>
-    );
-  }
-
   const selectedSkills = allSkills.filter((s) => selectedSkillIds.includes(s.id));
 
   if (step === 'scoring') {
@@ -1830,15 +1818,40 @@ function AthleteOnboarding() {
     );
   }
 
-  // Leaderboard step (final)
+  if (step === 'leaderboard') {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+        <ProgressBar currentStep={step} />
+        <LeaderboardStep
+          onComplete={goForward}
+          onBack={goBack}
+          loading={false}
+        />
+      </View>
+    );
+  }
+
+  if (step === 'schedule') {
+    return (
+      <View key={step} style={{ flex: 1, backgroundColor: Colors.background }}>
+        <ProgressBar currentStep={step} />
+        <ScheduleStep
+          onContinue={goForward}
+          onBack={goBack}
+          scheduleEntries={scheduleEntries}
+          setScheduleEntries={setScheduleEntries}
+          defaultMatchDay={defaultMatchDay}
+          setDefaultMatchDay={setDefaultMatchDay}
+        />
+      </View>
+    );
+  }
+
+  // Notifications step (final) — triggers handleComplete
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View key={step} style={{ flex: 1, backgroundColor: Colors.background }}>
       <ProgressBar currentStep={step} />
-      <LeaderboardStep
-        onComplete={handleComplete}
-        onBack={goBack}
-        loading={loading}
-      />
+      <NotificationStep onContinue={handleComplete} onBack={goBack} />
     </View>
   );
 }
@@ -1855,9 +1868,30 @@ function LeaderboardStep({
 }) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { data: myTeams } = useMyTeams();
+  const queryClient = useQueryClient();
+  const { data: myTeams, refetch: refetchTeams } = useMyTeams();
   const teamId = myTeams?.[0]?.id;
-  const { data: leaderboard } = useTeamLeaderboard(teamId);
+  const { data: leaderboard, refetch: refetchLeaderboard } = useTeamLeaderboard(teamId);
+  const joinTeam = useJoinTeam();
+
+  const [inviteCode, setInviteCode] = useState('');
+  const [joinSuccess, setJoinSuccess] = useState(false);
+
+  const handleJoin = async () => {
+    const code = inviteCode.trim();
+    if (!code) return;
+    try {
+      await joinTeam.mutateAsync(code);
+      setInviteCode('');
+      setJoinSuccess(true);
+      await refetchTeams();
+      await queryClient.invalidateQueries({ queryKey: ['team-leaderboard'] });
+      await refetchLeaderboard();
+      setTimeout(() => setJoinSuccess(false), 3000);
+    } catch (error: any) {
+      Alert.alert(t('common.error'), error.message);
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={leaderboardStyles.container}>
@@ -1869,6 +1903,40 @@ function LeaderboardStep({
             ? t('onboarding.leaderboardDesc')
             : t('onboarding.leaderboardNoTeam')}
         </Text>
+      </View>
+
+      <View style={leaderboardStyles.joinRow}>
+        <Text style={leaderboardStyles.joinHint}>{t('onboarding.leaderboardJoinHint')}</Text>
+        <View style={leaderboardStyles.joinInputRow}>
+          <TextInput
+            style={leaderboardStyles.joinInput}
+            placeholder={t('settings.inviteCodePlaceholder')}
+            placeholderTextColor={Colors.textTertiary}
+            value={inviteCode}
+            onChangeText={setInviteCode}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            editable={!joinTeam.isPending}
+          />
+          <TouchableOpacity
+            style={[
+              leaderboardStyles.joinButton,
+              (!inviteCode.trim() || joinTeam.isPending) && leaderboardStyles.joinButtonDisabled,
+            ]}
+            onPress={handleJoin}
+            disabled={!inviteCode.trim() || joinTeam.isPending}
+            activeOpacity={0.75}
+          >
+            <Text style={leaderboardStyles.joinButtonText}>
+              {joinTeam.isPending ? t('common.loading') : t('settings.join')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        {joinSuccess && (
+          <Text style={leaderboardStyles.joinSuccessText}>
+            {t('onboarding.leaderboardJoinSuccess')}
+          </Text>
+        )}
       </View>
 
       {leaderboard && leaderboard.length > 0 ? (
@@ -1932,6 +2000,55 @@ const leaderboardStyles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  joinRow: {
+    marginBottom: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  joinHint: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing.xs,
+  },
+  joinInputRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    alignItems: 'center',
+  },
+  joinInput: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.surface,
+    color: Colors.text,
+    fontSize: FontSize.md,
+  },
+  joinButton: {
+    height: 44,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinButtonDisabled: {
+    opacity: 0.45,
+  },
+  joinButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: FontSize.sm,
+  },
+  joinSuccessText: {
+    fontSize: FontSize.sm,
+    color: Colors.primary,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 

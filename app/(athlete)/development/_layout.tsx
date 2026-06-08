@@ -22,6 +22,13 @@ export default function DevelopmentLayout() {
           presentation: 'modal',
         }}
       />
+      <Stack.Screen
+        name="session-goals"
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+        }}
+      />
     </Stack>
   );
 }

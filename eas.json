@@ -5,14 +5,25 @@
   "build": {
     "preview": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "credentialsSource": "local"
       },
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "preview"
     },
     "production": {
       "android": {
-        "buildType": "app-bundle"
-      }
+        "buildType": "app-bundle",
+        "credentialsSource": "local"
+      },
+      "channel": "production"
+    },
+    "ios-production": {
+      "ios": {
+        "distribution": "store",
+        "credentialsSource": "remote"
+      },
+      "channel": "production"
     }
   }
 }

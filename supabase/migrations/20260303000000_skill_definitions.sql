@@ -42,7 +42,9 @@ INSERT INTO deco.skill_definitions (key, label, description, category, icon, dis
   ('transition_defence', 'Omschakeling verdediging', 'Terugverdedigen, doelzijde kiezen', 'tactical', 'arrow-back-outline', 5),
   ('set_pieces', 'Standaardsituaties', 'Strafcorners (aangeven/stoppen/hit), vrije slagen', 'tactical', 'flag-outline', 6),
   ('game_management', 'Wedstrijdmanagement', 'Tempo bepalen, wedstrijden uitspelen', 'tactical', 'time-outline', 7),
-  ('creating_overloads', 'Overtal creëren', '2-tegen-1 spel, overlap lopen, combineren', 'tactical', 'people-outline', 8);
+  ('creating_overloads', 'Overtal creëren', '2-tegen-1 spel, overlap lopen, combineren', 'tactical', 'people-outline', 8),
+  ('overview', 'Overzicht', 'Kijkgedrag mét de bal: hoofd omhoog, opties zien, speelveld overzien terwijl je in balbezit bent', 'tactical', 'eye-outline', 9),
+  ('scanning', 'Scannen', 'Kijkgedrag zonder de bal: om je heen kijken, informatie verzamelen vóórdat je de bal ontvangt', 'tactical', 'scan-outline', 10);
 
 -- Seed: Fysieke vaardigheden
 INSERT INTO deco.skill_definitions (key, label, description, category, icon, display_order) VALUES

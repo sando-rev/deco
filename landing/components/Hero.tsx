@@ -17,13 +17,18 @@ export function Hero({ onSelectRole }: HeroProps) {
             Gemaakt voor hockey
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-deco-text leading-tight tracking-tight mb-6">
-            Elke training,{" "}
-            <span className="text-deco-primary">met intentie.</span>
+            Onthoud elk{" "}
+            <span className="text-deco-primary">ontwikkelpunt.</span>
           </h1>
-          <p className="text-lg text-deco-text-secondary leading-relaxed mb-8 max-w-lg">
-            Deco is een ontwikkelcoaching-app voor hockey. Spelers stellen
-            doelen, reflecteren na elke sessie en volgen hun groei. Coaches
-            blijven verbonden met het traject van elke speler.
+          <p className="text-lg text-deco-text-secondary leading-relaxed mb-4 max-w-lg">
+            Na een ontwikkelgesprek vergeten spelers binnen twee weken waar ze
+            op moeten focussen. En als coach kun je onmogelijk van 15+ spelers
+            onthouden wat ze doen.
+          </p>
+          <p className="text-lg text-deco-text leading-relaxed mb-8 max-w-lg font-medium">
+            Deco lost dat op. Spelers stellen doelen, reflecteren na elke sessie
+            en volgen hun groei. Coaches zien in één oogopslag waar iedereen aan
+            werkt.
           </p>
           <div className="flex flex-wrap gap-3">
             <button
@@ -52,18 +57,18 @@ export function Hero({ onSelectRole }: HeroProps) {
                 Prestatieoverzicht
               </div>
               <RadarChartWeb size={200} />
-              <div className="grid grid-cols-4 gap-2 mt-4 w-full">
+              <div className="grid grid-cols-2 gap-2 mt-4 w-full">
                 {[
-                  { label: "DRI", val: 8 },
-                  { label: "PAS", val: 6 },
-                  { label: "SHO", val: 9 },
-                  { label: "DEF", val: 5 },
+                  { label: "Technisch", val: "7.5", color: "text-deco-primary" },
+                  { label: "Tactisch", val: "6.8", color: "text-blue-600" },
+                  { label: "Fysiek", val: "8.2", color: "text-amber-600" },
+                  { label: "Mentaal", val: "6.0", color: "text-purple-600" },
                 ].map((s) => (
                   <div
                     key={s.label}
                     className="bg-white rounded-lg p-2 text-center"
                   >
-                    <div className="text-lg font-extrabold text-deco-text">
+                    <div className={`text-lg font-extrabold ${s.color}`}>
                       {s.val}
                     </div>
                     <div className="text-[8px] text-deco-text-secondary">

@@ -82,9 +82,13 @@ export function useUpdateOnboardingComplete() {
         .eq('id', user!.id);
 
       if (error) throw error;
-    },
-    onSuccess: () => {
-      refreshProfile();
+
+      // Refresh profile inside mutationFn so that `await mutateAsync()`
+      // only resolves after the profile state has been updated.
+      // Previously this was in onSuccess which is fire-and-forget,
+      // meaning the caller's `await` returned before the profile was refreshed,
+      // leaving the AuthGate with a stale profile.
+      await refreshProfile();
     },
   });
 }

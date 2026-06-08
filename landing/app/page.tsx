@@ -9,6 +9,7 @@ import { ScreenshotGallery } from "@/components/ScreenshotGallery";
 import { Methodology } from "@/components/Methodology";
 import { HowItWorks } from "@/components/HowItWorks";
 import { CTA } from "@/components/CTA";
+import { FAQ } from "@/components/FAQ";
 import { Footer } from "@/components/Footer";
 
 export default function Home() {
@@ -20,10 +21,134 @@ export default function Home() {
     featuresRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        name: "Deco",
+        url: "https://decotraining.com",
+        description:
+          "Ontwikkelcoaching voor hockey — stel doelen, reflecteer en groei als speler.",
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: "Deco",
+        applicationCategory: "SportsApplication",
+        operatingSystem: "Android",
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "EUR",
+        },
+        description:
+          "Hockey ontwikkelcoaching app voor spelers en coaches. Stel doelen, reflecteer na elke sessie en groei als speler.",
+        downloadUrl: "https://decotraining.com/#download",
+      },
+      {
+        "@type": "Organization",
+        name: "Deco Training",
+        url: "https://decotraining.com",
+        logo: "https://decotraining.com/icon.png",
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "Wat is Deco?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Deco is een hockey ontwikkelingsapp waarmee spelers doelen stellen, reflecteren na trainingen en wedstrijden, en hun groei bijhouden. Coaches kunnen de voortgang van hun spelers volgen en feedback geven.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Is Deco gratis?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Ja, Deco is volledig gratis te gebruiken voor zowel spelers als coaches.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Voor wie is Deco bedoeld?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Deco is gemaakt voor veldhockeyspelers van alle niveaus en hun coaches. Of je nu in de D-jeugd speelt of in de Hoofdklasse, Deco helpt je om gestructureerd aan je ontwikkeling te werken.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Hoe werkt het puntensysteem?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Je verdient XP (experience points) door doelen te stellen, te reflecteren na trainingen en je vaardigheden te beoordelen. Hoe actiever je bezig bent met je ontwikkeling, hoe meer punten je verdient. Je kunt je ranglijst positie vergelijken met teamgenoten.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Kan mijn coach meekijken?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Ja, coaches kunnen de voortgang van hun spelers volgen, feedback geven op doelen en weekrapporten schrijven. Spelers ontvangen een melding wanneer hun coach feedback geeft.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Werkt Deco ook voor coaches?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Absoluut. Coaches hebben een eigen dashboard waarmee ze de ontwikkeling van al hun spelers kunnen volgen, individuele feedback kunnen geven en weekrapporten kunnen schrijven.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Op welke apparaten werkt Deco?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Deco is beschikbaar als Android app. Een iOS versie is in ontwikkeling.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Hoe beschermt Deco mijn gegevens?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Deco slaat je gegevens veilig op via Supabase (beveiligde cloud database). Je kunt je account en alle gegevens op elk moment verwijderen via de instellingen in de app. Lees meer in ons privacybeleid.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Kan ik Deco gebruiken zonder team?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Ja, je kunt Deco ook individueel gebruiken om je eigen doelen en ontwikkeling bij te houden. Een team joinen is optioneel.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Hoe begin ik?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Download de app, maak een account aan en doorloop de korte onboarding. Binnen een paar minuten heb je je profiel, eerste doelen en trainingsschema ingesteld.",
+            },
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <main className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
       <Hero onSelectRole={handleSelectRole} />
+
+      <Methodology />
 
       {/* Features Section */}
       <section
@@ -63,8 +188,8 @@ export default function Home() {
         </div>
       </section>
 
-      <Methodology />
       <HowItWorks />
+      <FAQ />
       <CTA />
       <Footer />
     </main>

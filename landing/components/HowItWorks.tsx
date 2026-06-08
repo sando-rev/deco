@@ -5,7 +5,7 @@ export function HowItWorks() {
       title: "Beoordeel",
       subtitle: "Weet waar je staat",
       description:
-        "Beoordeel jezelf op 8 hockeyvaardigheden — dribbelen, passen, schieten, verdedigen, conditie, spelinzicht, communicatie en mentale kracht. Jouw radargrafiek laat je unieke profiel zien.",
+        "Kies vaardigheden die passen bij jouw positie en speelstijl — verdeeld over technisch, tactisch, fysiek en mentaal. Beoordeel jezelf en ontdek je unieke profiel in een radargrafiek.",
       icon: (
         <svg
           className="w-8 h-8"
@@ -25,7 +25,7 @@ export function HowItWorks() {
       title: "Stel doelen",
       subtitle: "Kies je aandachtspunten",
       description:
-        "Kies 2-3 attributen om te ontwikkelen. Stel SMART-doelen in en ontvang direct AI-feedback om ze specifieker en haalbaar te maken.",
+        "Kies 2-3 vaardigheden om te ontwikkelen. Stel specifieke, meetbare en uitdagende doelen en ontvang direct AI-feedback om ze concreter en uitvoerbaarder te maken.",
       icon: (
         <svg
           className="w-8 h-8"
@@ -43,9 +43,9 @@ export function HowItWorks() {
     {
       num: 3,
       title: "Reflecteer & Groei",
-      subtitle: "Laat elke sessie tellen",
+      subtitle: "Zonder reflectie geen groei",
       description:
-        "Neem na een training of wedstrijd 2 minuten om je voortgang te beoordelen en op te schrijven wat je hebt geleerd. Zie je vaardigheden in de loop van de tijd evolueren.",
+        "Reflecteren is het verschil tussen trainen en beter worden. Neem na elke sessie 2 minuten om te evalueren wat werkte, wat niet en wat je volgende keer anders doet. Zo vergeet je nooit meer waar je mee bezig bent.",
       icon: (
         <svg
           className="w-8 h-8"

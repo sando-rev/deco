@@ -47,12 +47,12 @@ test.describe('XP System', () => {
 // ─── Achievements Tests ──────────────────────────────
 
 test.describe('Achievements', () => {
-  test('all 18 achievements are seeded', async () => {
+  test('all 20 achievements are seeded', async () => {
     const sb = await signInAsAthlete();
     const { data, error } = await sb.from('achievements').select('*').order('display_order');
     expect(error).toBeNull();
     expect(data).toBeTruthy();
-    expect(data!.length).toBe(18);
+    expect(data!.length).toBe(22);
   });
 
   test('achievement categories are correct', async () => {

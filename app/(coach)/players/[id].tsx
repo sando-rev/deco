@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useSelectedSkills, useLatestSkillScores, useSkillDefinitions } from '../../../src/hooks/useSkills';
 import { useGoals, useGoalWithComments } from '../../../src/hooks/useGoals';
 import { useReflections } from '../../../src/hooks/useReflections';
-import { useAddCoachComment } from '../../../src/hooks/useTeam';
+import { useAddCoachComment, useRemoveCoachThumbsUp, useSaveScoreFeedback, useUpdateScoreFeedback, useDeleteScoreFeedback, useScoreFeedback } from '../../../src/hooks/useTeam';
 import { RadarChart, RadarSkill } from '../../../src/components/RadarChart';
 import { GoalCard } from '../../../src/components/GoalCard';
 import { Card } from '../../../src/components/ui/Card';
@@ -23,7 +25,7 @@ import { Button } from '../../../src/components/ui/Button';
 import { SKILL_CATEGORIES } from '../../../src/constants/skills';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
 import { supabase } from '../../../src/services/supabase';
-import { Profile, Goal, CoachComment } from '../../../src/types/database';
+import { Profile, Goal, CoachComment, CoachScoreFeedback } from '../../../src/types/database';
 import { useAuth } from '../../../src/hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -43,6 +45,7 @@ function GoalWithFeedback({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const addComment = useAddCoachComment();
+  const removeThumbsUp = useRemoveCoachThumbsUp();
   const { data: goalData } = useGoalWithComments(goal.id);
   const [commentText, setCommentText] = useState('');
   const [showCommentInput, setShowCommentInput] = useState(false);
@@ -55,9 +58,12 @@ function GoalWithFeedback({
   );
 
   const handleThumbsUp = async () => {
-    if (hasThumbsUp) return; // already liked
     try {
-      await addComment.mutateAsync({ goalId: goal.id, isThumbsUp: true });
+      if (hasThumbsUp) {
+        await removeThumbsUp.mutateAsync({ goalId: goal.id });
+      } else {
+        await addComment.mutateAsync({ goalId: goal.id, isThumbsUp: true });
+      }
     } catch (error: any) {
       Alert.alert(t('common.error'), error.message);
     }
@@ -112,7 +118,7 @@ function GoalWithFeedback({
         <TouchableOpacity
           style={[styles.thumbsUpButton, hasThumbsUp && styles.thumbsUpActive]}
           onPress={handleThumbsUp}
-          disabled={hasThumbsUp}
+          disabled={addComment.isPending || removeThumbsUp.isPending}
         >
           <Ionicons
             name={hasThumbsUp ? 'thumbs-up' : 'thumbs-up-outline'}
@@ -236,12 +242,22 @@ export default function PlayerDetailScreen() {
     enabled: !!athleteId,
   });
 
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { data: selectedSkills, isLoading: loadingSkills } = useSelectedSkills(athleteId);
   const { data: skillScores, isLoading: loadingScores } = useLatestSkillScores(athleteId);
   const { data: skillDefs } = useSkillDefinitions();
   const { data: activeGoals } = useGoals(athleteId, 'active');
   const { data: achievedGoals } = useGoals(athleteId, 'achieved');
   const { data: reflections } = useReflections(athleteId);
+  const { data: scoreFeedback } = useScoreFeedback(athleteId);
+  const saveScoreFeedback = useSaveScoreFeedback();
+  const updateScoreFeedback = useUpdateScoreFeedback();
+  const deleteScoreFeedback = useDeleteScoreFeedback();
+  const [scoreFeedbackText, setScoreFeedbackText] = useState('');
+  const [showScoreFeedbackInput, setShowScoreFeedbackInput] = useState(false);
+  const [editingScoreFeedback, setEditingScoreFeedback] = useState<CoachScoreFeedback | null>(null);
+  const [editScoreFeedbackText, setEditScoreFeedbackText] = useState('');
 
   if (loadingProfile || loadingSkills || loadingScores) {
     return (
@@ -261,7 +277,17 @@ export default function PlayerDetailScreen() {
   }));
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+    >
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+    >
       {/* Player header */}
       <View style={styles.playerHeader}>
         <View style={styles.avatar}>
@@ -313,6 +339,147 @@ export default function PlayerDetailScreen() {
             );
           })}
         </View>
+      )}
+
+      {/* Score feedback section */}
+      {selectedSkills && selectedSkills.length > 0 && (
+        <Card style={styles.scoreFeedbackCard}>
+          <View style={styles.scoreFeedbackHeader}>
+            <Ionicons name="chatbox-ellipses-outline" size={18} color={Colors.primary} />
+            <Text style={styles.scoreFeedbackTitle}>{t('scoreFeedback.title')}</Text>
+            <TouchableOpacity
+              style={styles.scoreFeedbackToggle}
+              onPress={() => setShowScoreFeedbackInput(!showScoreFeedbackInput)}
+            >
+              <Ionicons name={showScoreFeedbackInput ? 'close-outline' : 'add-outline'} size={20} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Input for new feedback */}
+          {showScoreFeedbackInput && (
+            <View style={styles.scoreFeedbackInputRow}>
+              <TextInput
+                style={styles.scoreFeedbackField}
+                placeholder={t('scoreFeedback.writeScoreFeedback')}
+                placeholderTextColor={Colors.textTertiary}
+                value={scoreFeedbackText}
+                onChangeText={setScoreFeedbackText}
+                multiline
+              />
+              <Button
+                title={t('scoreFeedback.sendFeedback')}
+                onPress={async () => {
+                  if (!scoreFeedbackText.trim()) return;
+                  try {
+                    await saveScoreFeedback.mutateAsync({
+                      athleteId,
+                      feedbackText: scoreFeedbackText.trim(),
+                    });
+                    setScoreFeedbackText('');
+                    setShowScoreFeedbackInput(false);
+                  } catch (error: any) {
+                    Alert.alert(t('common.error'), error.message);
+                  }
+                }}
+                loading={saveScoreFeedback.isPending}
+                size="sm"
+                disabled={!scoreFeedbackText.trim()}
+              />
+            </View>
+          )}
+
+          {/* Existing score feedback */}
+          {scoreFeedback && scoreFeedback.length > 0 ? (
+            <View style={styles.scoreFeedbackList}>
+              {scoreFeedback.map((fb) => (
+                <View key={fb.id} style={styles.scoreFeedbackItem}>
+                  {editingScoreFeedback?.id === fb.id ? (
+                    <View style={styles.editRow}>
+                      <TextInput
+                        style={styles.editField}
+                        value={editScoreFeedbackText}
+                        onChangeText={setEditScoreFeedbackText}
+                        multiline
+                      />
+                      <View style={styles.editActions}>
+                        <Button
+                          title={t('scoreFeedback.updateFeedback')}
+                          onPress={async () => {
+                            if (!editScoreFeedbackText.trim()) return;
+                            try {
+                              await updateScoreFeedback.mutateAsync({
+                                feedbackId: fb.id,
+                                athleteId,
+                                feedbackText: editScoreFeedbackText.trim(),
+                              });
+                              setEditingScoreFeedback(null);
+                              setEditScoreFeedbackText('');
+                            } catch (error: any) {
+                              Alert.alert(t('common.error'), error.message);
+                            }
+                          }}
+                          size="sm"
+                          loading={updateScoreFeedback.isPending}
+                        />
+                        <TouchableOpacity onPress={() => setEditingScoreFeedback(null)}>
+                          <Text style={styles.cancelEdit}>{t('common.cancel')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <>
+                      <Text style={styles.scoreFeedbackText}>{fb.feedback_text}</Text>
+                      <View style={styles.scoreFeedbackFooter}>
+                        <Text style={styles.commentMeta}>
+                          {format(new Date(fb.created_at), 'd MMM', { locale: nl })}
+                        </Text>
+                        {fb.coach_id === user?.id && (
+                          <View style={styles.commentActions}>
+                            <TouchableOpacity
+                              onPress={() => {
+                                setEditingScoreFeedback(fb);
+                                setEditScoreFeedbackText(fb.feedback_text);
+                              }}
+                            >
+                              <Ionicons name="pencil-outline" size={14} color={Colors.textTertiary} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => {
+                                Alert.alert(
+                                  t('scoreFeedback.deleteFeedback'),
+                                  t('scoreFeedback.deleteConfirm'),
+                                  [
+                                    { text: t('common.cancel'), style: 'cancel' },
+                                    {
+                                      text: t('common.delete'),
+                                      style: 'destructive',
+                                      onPress: async () => {
+                                        await deleteScoreFeedback.mutateAsync({
+                                          feedbackId: fb.id,
+                                          athleteId,
+                                        });
+                                      },
+                                    },
+                                  ]
+                                );
+                              }}
+                            >
+                              <Ionicons name="trash-outline" size={14} color={Colors.error} />
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+                    </>
+                  )}
+                </View>
+              ))}
+            </View>
+          ) : (
+            !showScoreFeedbackInput && (
+              <Text style={styles.scoreFeedbackEmpty}>{t('scoreFeedback.noFeedback')}</Text>
+            )
+          )}
+        </Card>
       )}
 
       {/* Active goals with integrated feedback */}
@@ -379,6 +546,7 @@ export default function PlayerDetailScreen() {
         <Text style={styles.emptyText}>{t('coach.noReflections')}</Text>
       )}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -623,5 +791,64 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     fontStyle: 'italic',
     marginBottom: Spacing.md,
+  },
+  // Score feedback styles
+  scoreFeedbackCard: {
+    marginBottom: Spacing.lg,
+    padding: Spacing.md,
+  },
+  scoreFeedbackHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  scoreFeedbackTitle: {
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.text,
+    flex: 1,
+  },
+  scoreFeedbackToggle: {
+    padding: Spacing.xs,
+  },
+  scoreFeedbackInputRow: {
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  scoreFeedbackField: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    fontSize: FontSize.sm,
+    color: Colors.text,
+    maxHeight: 100,
+  },
+  scoreFeedbackList: {
+    gap: Spacing.sm,
+  },
+  scoreFeedbackItem: {
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.sm,
+  },
+  scoreFeedbackText: {
+    fontSize: FontSize.sm,
+    color: Colors.text,
+    lineHeight: 20,
+  },
+  scoreFeedbackFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.xs,
+  },
+  scoreFeedbackEmpty: {
+    fontSize: FontSize.sm,
+    color: Colors.textTertiary,
+    fontStyle: 'italic',
   },
 });

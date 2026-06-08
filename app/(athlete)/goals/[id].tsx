@@ -13,12 +13,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useGoalWithComments, useUpdateGoalStatus } from '../../../src/hooks/useGoals';
 import { useSkillDefinitions, useLatestSkillScores } from '../../../src/hooks/useSkills';
-import { useMarkFeedbackSeen } from '../../../src/hooks/useGamification';
+import { useMarkFeedbackSeen, useCheckAchievements, useGoalStats, useAwardXp, XP_VALUES, useSessionStreak } from '../../../src/hooks/useGamification';
 import { GoalAnalysisCard } from '../../../src/components/GoalAnalysisCard';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
 import { Button } from '../../../src/components/ui/Button';
 import { Card } from '../../../src/components/ui/Card';
-import { Celebration } from '../../../src/components/Celebration';
+import { useCelebration } from '../../../src/components/CelebrationContext';
 import { format, differenceInDays } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -34,8 +34,12 @@ export default function GoalDetailScreen() {
   const updateStatus = useUpdateGoalStatus();
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [selectedImprovement, setSelectedImprovement] = useState<number>(1);
-  const [showCelebration, setShowCelebration] = useState(false);
+  const { celebrate } = useCelebration();
   const markSeen = useMarkFeedbackSeen();
+  const { checkAndAward } = useCheckAchievements();
+  const { data: goalStats } = useGoalStats();
+  const awardXp = useAwardXp();
+  const { data: streak } = useSessionStreak();
 
   // Mark coach comments as seen when viewing this goal
   React.useEffect(() => {
@@ -84,8 +88,47 @@ export default function GoalDetailScreen() {
         status: 'achieved',
         scoreImprovement: selectedImprovement,
       });
+
+      // Award XP for achieving goal
+      const xpPoints = XP_VALUES.goal_achieved;
+      await awardXp.mutateAsync({
+        eventType: 'goal_achieved',
+        points: xpPoints,
+        referenceId: goal.id,
+      });
+
+      // Check achievements with updated goalsAchieved count
+      const stats = goalStats
+        ? { ...goalStats, goalsAchieved: goalStats.goalsAchieved + 1, currentStreak: streak ?? 0 }
+        : { goalsCreated: 1, goalsAchieved: 1, reflections: 0, growthPoints: 0, bestGoalQuality: 0, reflectionsWithNotes: 0, currentStreak: streak ?? 0, bestRank: 0 };
+
+      const newAchievements = await checkAndAward(stats);
+
       setShowCompleteModal(false);
-      setShowCelebration(true);
+
+      // Show goal achieved celebration with XP
+      const achievementXp = newAchievements.reduce((sum, a) => sum + a.xp_reward, 0);
+      celebrate({
+        type: 'goal_achieved',
+        message: t('goals.celebrationAchieved'),
+        subMessage: t('gamification.xpReasonGoalAchieved'),
+        xpAmount: xpPoints + achievementXp,
+        confetti: true,
+      });
+
+      // Show achievement celebrations
+      for (const achievement of newAchievements) {
+        celebrate({
+          type: 'achievement',
+          message: t('gamification.newAchievement'),
+          subMessage: t(`achievements.${achievement.key}` as any),
+          icon: achievement.icon,
+          xpAmount: achievement.xp_reward,
+          confetti: true,
+        });
+      }
+
+      router.replace('/(athlete)/profile');
     } catch (error: any) {
       Alert.alert(t('common.error'), error.message);
     }
@@ -315,14 +358,6 @@ export default function GoalDetailScreen() {
         </View>
       </Modal>
 
-      <Celebration
-        visible={showCelebration}
-        message={t('goals.celebrationAchieved')}
-        onDismiss={() => {
-          setShowCelebration(false);
-          router.replace('/(athlete)/profile');
-        }}
-      />
     </>
   );
 }

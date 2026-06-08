@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-export const SUPABASE_URL = 'https://njzojocqtouumgazbfso.supabase.co';
-export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qem9qb2NxdG91dW1nYXpiZnNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4NzU1MTIsImV4cCI6MjA4MzQ1MTUxMn0.U8yQUOUVrQ_zcFOfL2ghzNIBtchUr54Owi_UWRDqdAQ';
+export const SUPABASE_URL = 'https://hjbzknaionxkdkiowcch.supabase.co';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqYnprbmFpb254a2RraW93Y2NoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNjgxMjAsImV4cCI6MjA4ODc0NDEyMH0.WRE11VHC7-6QJNaPgg-9miDGceDxDmGqPL45-fhI6Ic';
 
 export const ATHLETE_EMAIL = 'test-playwright@deco.app';
 export const ATHLETE_PASSWORD = 'TestPass123!';

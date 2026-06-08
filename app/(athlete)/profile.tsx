@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Slider from '@react-native-community/slider';
@@ -19,12 +19,25 @@ import { Button } from '../../src/components/ui/Button';
 import { SKILL_CATEGORIES } from '../../src/constants/skills';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../src/constants/theme';
 import { PositionType, SkillCategory, SkillDefinition } from '../../src/types/database';
+import { useScoreFeedback, useUnseenScoreFeedback } from '../../src/hooks/useTeam';
+import { format } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const { data: selectedSkills, isLoading: loadingSkills } = useSelectedSkills();
   const { data: skillScores, isLoading: loadingScores } = useLatestSkillScores();
+  const { data: scoreFeedback } = useScoreFeedback(profile?.id);
+  const { markSeen } = useUnseenScoreFeedback();
+
+  // Mark score feedback as seen when profile screen mounts
+  useEffect(() => {
+    if (scoreFeedback && scoreFeedback.length > 0) {
+      markSeen();
+    }
+  }, [scoreFeedback]);
+
   const [isEditing, setIsEditing] = useState(false);
   const [editScores, setEditScores] = useState<Record<string, number> | null>(null);
   const saveScores = useSaveSkillScores();
@@ -249,6 +262,38 @@ export default function ProfileScreen() {
               style={styles.editButton}
               icon={<Ionicons name="create-outline" size={18} color={Colors.primary} />}
             />
+
+            {/* Coach score feedback */}
+            {scoreFeedback && scoreFeedback.length > 0 && (
+              <Card style={styles.scoreFeedbackCard}>
+                <View style={styles.scoreFeedbackHeader}>
+                  <Ionicons name="chatbox-ellipses" size={18} color={Colors.primary} />
+                  <Text style={styles.scoreFeedbackTitle}>
+                    {t('scoreFeedback.coachFeedbackOnScores')}
+                  </Text>
+                </View>
+                <Text style={styles.scoreFeedbackLatestText}>
+                  {scoreFeedback[0].feedback_text}
+                </Text>
+                <Text style={styles.scoreFeedbackDate}>
+                  {format(new Date(scoreFeedback[0].created_at), 'd MMM yyyy', { locale: nl })}
+                </Text>
+                {scoreFeedback.length > 1 && (
+                  <View style={styles.scoreFeedbackOlder}>
+                    {scoreFeedback.slice(1, 3).map((fb) => (
+                      <View key={fb.id} style={styles.scoreFeedbackOlderItem}>
+                        <Text style={styles.scoreFeedbackOlderText} numberOfLines={2}>
+                          {fb.feedback_text}
+                        </Text>
+                        <Text style={styles.scoreFeedbackOlderDate}>
+                          {format(new Date(fb.created_at), 'd MMM', { locale: nl })}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </Card>
+            )}
           </>
         ) : (
           <View style={styles.editContainer}>
@@ -622,6 +667,59 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.primary,
   },
+  // Score feedback styles (athlete view)
+  scoreFeedbackCard: {
+    marginBottom: Spacing.lg,
+    padding: Spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
+  },
+  scoreFeedbackHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  scoreFeedbackTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  scoreFeedbackLatestText: {
+    fontSize: FontSize.md,
+    color: Colors.text,
+    lineHeight: 22,
+    marginBottom: Spacing.xs,
+  },
+  scoreFeedbackDate: {
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+  },
+  scoreFeedbackOlder: {
+    marginTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    paddingTop: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  scoreFeedbackOlderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+  },
+  scoreFeedbackOlderText: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    flex: 1,
+    lineHeight: 18,
+  },
+  scoreFeedbackOlderDate: {
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+  },
   chartCard: {
     alignItems: 'center',
     padding: Spacing.lg,
@@ -662,10 +760,8 @@ const styles = StyleSheet.create({
   },
   scoreCard: {
     width: '23%',
-    flexGrow: 1,
     alignItems: 'center',
     gap: 4,
-    minWidth: 75,
   },
   scoreValue: {
     fontSize: FontSize.xl,

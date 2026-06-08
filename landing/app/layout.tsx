@@ -2,14 +2,33 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://decotraining.com"),
   title: "Deco — Ontwikkelcoaching voor hockey",
   description:
     "Stel doelen, reflecteer na elke sessie en groei als speler. Deco houdt jouw ontwikkeling centraal — voor spelers en coaches.",
+  alternates: {
+    canonical: "https://decotraining.com",
+  },
   openGraph: {
     title: "Deco — Ontwikkelcoaching voor hockey",
     description:
       "Stel doelen, reflecteer na elke sessie en groei als speler. Deco houdt jouw ontwikkeling centraal.",
     type: "website",
+    url: "https://decotraining.com",
+    images: [
+      {
+        url: "https://decotraining.com/og-image.png",
+        width: 1200,
+        height: 630,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Deco — Ontwikkelcoaching voor hockey",
+    description:
+      "Stel doelen, reflecteer na elke sessie en groei als speler. Deco houdt jouw ontwikkeling centraal.",
+    images: ["https://decotraining.com/og-image.png"],
   },
 };
 

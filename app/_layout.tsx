@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useFonts } from 'expo-font';
 import { Slot, Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '../src/hooks/useAuth';
 import { useNotifications } from '../src/hooks/useNotifications';
+import { CelebrationProvider } from '../src/components/CelebrationContext';
+import { CelebrationOverlay } from '../src/components/CelebrationOverlay';
 import { Colors } from '../src/constants/theme';
 import { StatusBar } from 'expo-status-bar';
 import '../src/i18n';
@@ -23,12 +25,28 @@ const queryClient = new QueryClient({
 SplashScreen.preventAutoHideAsync();
 
 function AuthGate() {
-  const { session, profile, isLoading } = useAuth();
+  const { session, profile, isLoading, refreshProfile } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const profileRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Register push notifications when authenticated
   useNotifications();
+
+  // If we have a session but no profile, keep retrying to load it.
+  // This handles new sign-ups where the auth trigger may be slow.
+  useEffect(() => {
+    if (session && !profile && !isLoading) {
+      console.log('[AuthGate] session exists but no profile, scheduling retry...');
+      profileRetryRef.current = setTimeout(() => {
+        console.log('[AuthGate] retrying profile fetch...');
+        refreshProfile();
+      }, 2000);
+    }
+    return () => {
+      if (profileRetryRef.current) clearTimeout(profileRetryRef.current);
+    };
+  }, [session, profile, isLoading]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -45,8 +63,13 @@ function AuthGate() {
         console.log('[AuthGate] -> sign-in');
         router.replace('/(auth)/sign-in');
       }
-    } else if (!profile?.onboarding_completed) {
-      // Signed in but haven't completed onboarding
+    } else if (!profile) {
+      // Session exists but profile not loaded yet — stay put, don't redirect.
+      // The retry effect above will keep trying to load it.
+      console.log('[AuthGate] waiting for profile to load...');
+      return;
+    } else if (!profile.onboarding_completed) {
+      // Signed in, profile loaded, but haven't completed onboarding
       const onOnboarding = inAuthGroup && segments[1] === 'onboarding';
       if (!onOnboarding) {
         console.log('[AuthGate] -> onboarding');
@@ -103,8 +126,11 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <StatusBar style="dark" />
-        <AuthGate />
+        <CelebrationProvider>
+          <StatusBar style="dark" />
+          <AuthGate />
+          <CelebrationOverlay />
+        </CelebrationProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

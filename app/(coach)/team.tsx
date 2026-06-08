@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTeamMembers } from '../../src/hooks/useTeam';
 import { useActiveTeam } from '../../src/hooks/useActiveTeam';
+import { supabase } from '../../src/services/supabase';
 import { Card } from '../../src/components/ui/Card';
 import { Button } from '../../src/components/ui/Button';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../src/constants/theme';
@@ -21,6 +23,27 @@ export default function TeamScreen() {
   const { t } = useTranslation();
   const { activeTeam: team, teams, setActiveTeam } = useActiveTeam();
   const { data: members } = useTeamMembers(team?.id);
+  const queryClient = useQueryClient();
+
+  // Realtime: refresh members list when a player joins or leaves
+  useEffect(() => {
+    if (!team?.id) return;
+
+    const channel = supabase
+      .channel(`team-members-${team.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'deco', table: 'team_members', filter: `team_id=eq.${team.id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['team-members', team.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [team?.id]);
 
   const copyCode = async () => {
     if (team?.invite_code) {
@@ -50,19 +73,20 @@ export default function TeamScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Team selector */}
       {teams.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }} contentContainerStyle={{ gap: Spacing.sm, paddingHorizontal: Spacing.lg }}>
-          {teams.map((t) => (
+        <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md, flexWrap: 'wrap' }}>
+          {teams.map((tm) => (
             <TouchableOpacity
-              key={t.id}
+              key={tm.id}
               style={[
-                { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: 999, backgroundColor: t.id === team?.id ? Colors.primary : Colors.surfaceSecondary, borderWidth: 1.5, borderColor: t.id === team?.id ? Colors.primary : Colors.border },
+                styles.teamSelectorButton,
+                tm.id === team?.id ? styles.teamSelectorActive : styles.teamSelectorInactive,
               ]}
-              onPress={() => setActiveTeam(t)}
+              onPress={() => setActiveTeam(tm)}
             >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: t.id === team?.id ? Colors.white : Colors.textSecondary }}>{t.name}</Text>
+              <Text style={[styles.teamSelectorText, tm.id === team?.id ? styles.teamSelectorTextActive : styles.teamSelectorTextInactive]}>{tm.name}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
       )}
 
       {/* Team info */}
@@ -253,5 +277,29 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     fontStyle: 'italic',
     textAlign: 'center',
+  },
+  teamSelectorButton: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm + 2,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1.5,
+  },
+  teamSelectorActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  teamSelectorInactive: {
+    backgroundColor: Colors.surfaceSecondary,
+    borderColor: Colors.border,
+  },
+  teamSelectorText: {
+    fontSize: FontSize.md,
+    fontWeight: '600',
+  },
+  teamSelectorTextActive: {
+    color: Colors.white,
+  },
+  teamSelectorTextInactive: {
+    color: Colors.textSecondary,
   },
 });

@@ -265,7 +265,7 @@ export function useTeamLeaderboard(teamId: string | undefined) {
 
 // ─── Streak calculation (per scheduled session) ──────
 export function useSessionStreak(athleteId?: string) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const id = athleteId ?? user?.id;
 
   return useQuery({
@@ -284,10 +284,31 @@ export function useSessionStreak(athleteId?: string) {
       if (error) throw error;
       if (!sessions || sessions.length === 0) return 0;
 
-      // Count consecutive sessions (from most recent) that have a reflection
+      // Get last_active_at to check if user was active on session days
+      const lastActive = profile?.last_active_at
+        ? new Date(profile.last_active_at).toISOString().split('T')[0]
+        : null;
+
+      // Group sessions by date (multiple sessions on same day = 1 streak day)
+      const sessionDays: string[] = [];
+      const seen = new Set<string>();
+      for (const s of sessions) {
+        if (!seen.has(s.date)) {
+          seen.add(s.date);
+          sessionDays.push(s.date);
+        }
+      }
+
+      // Count consecutive days where the user either:
+      // 1. Reflected on a session that day, OR
+      // 2. Was active in the app that day (last_active_at falls on that date)
+      // For today: always count as active if user is currently using the app
       let streak = 0;
-      for (const session of sessions) {
-        if (session.reflection_id) {
+      for (const day of sessionDays) {
+        const hasReflection = sessions.some(s => s.date === day && s.reflection_id);
+        const wasActive = day === today || day === lastActive;
+
+        if (hasReflection || wasActive) {
           streak++;
         } else {
           break;

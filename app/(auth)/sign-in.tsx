@@ -7,6 +7,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +18,7 @@ import { Colors, Spacing, FontSize } from '../../src/constants/theme';
 
 export default function SignIn() {
   const { t } = useTranslation();
-  const { signIn } = useAuth();
+  const { signIn, resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,6 +35,19 @@ export default function SignIn() {
 
     if (error) {
       Alert.alert(t('auth.signInFailed'), error.message);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert(t('common.error'), t('auth.enterEmailFirst'));
+      return;
+    }
+    const { error } = await resetPassword(email);
+    if (error) {
+      Alert.alert(t('common.error'), error.message);
+    } else {
+      Alert.alert(t('auth.resetSent'), t('auth.resetSentMsg'));
     }
   };
 
@@ -71,6 +85,9 @@ export default function SignIn() {
             onChangeText={setPassword}
             secureTextEntry
           />
+          <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPassword}>
+            <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword')}</Text>
+          </TouchableOpacity>
           <Button
             title={t('auth.signIn')}
             onPress={handleSignIn}
@@ -126,6 +143,16 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: Spacing.lg,
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
+  forgotPasswordText: {
+    color: Colors.primary,
+    fontSize: FontSize.sm,
+    fontWeight: '500',
   },
   button: {
     marginTop: Spacing.sm,

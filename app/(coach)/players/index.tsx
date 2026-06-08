@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useTeamMembers } from '../../../src/hooks/useTeam';
 import { useActiveTeam } from '../../../src/hooks/useActiveTeam';
 import { PlayerCard } from '../../../src/components/PlayerCard';
-import { Colors, Spacing, FontSize } from '../../../src/constants/theme';
+import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
 
 export default function PlayersScreen() {
   const { t } = useTranslation();
@@ -37,19 +37,20 @@ export default function PlayersScreen() {
 
       {/* Team selector */}
       {teams.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }} contentContainerStyle={{ gap: Spacing.sm, paddingHorizontal: Spacing.lg }}>
-          {teams.map((t) => (
+        <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.lg, marginBottom: Spacing.md, flexWrap: 'wrap' }}>
+          {teams.map((tm) => (
             <TouchableOpacity
-              key={t.id}
+              key={tm.id}
               style={[
-                { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: 999, backgroundColor: t.id === team?.id ? Colors.primary : Colors.surfaceSecondary, borderWidth: 1.5, borderColor: t.id === team?.id ? Colors.primary : Colors.border },
+                styles.teamSelectorButton,
+                tm.id === team?.id ? styles.teamSelectorActive : styles.teamSelectorInactive,
               ]}
-              onPress={() => setActiveTeam(t)}
+              onPress={() => setActiveTeam(tm)}
             >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: t.id === team?.id ? Colors.white : Colors.textSecondary }}>{t.name}</Text>
+              <Text style={[styles.teamSelectorText, tm.id === team?.id ? styles.teamSelectorTextActive : styles.teamSelectorTextInactive]}>{tm.name}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
       )}
 
       {isLoading ? (
@@ -129,5 +130,29 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  teamSelectorButton: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm + 2,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1.5,
+  },
+  teamSelectorActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  teamSelectorInactive: {
+    backgroundColor: Colors.surfaceSecondary,
+    borderColor: Colors.border,
+  },
+  teamSelectorText: {
+    fontSize: FontSize.md,
+    fontWeight: '600',
+  },
+  teamSelectorTextActive: {
+    color: Colors.white,
+  },
+  teamSelectorTextInactive: {
+    color: Colors.textSecondary,
   },
 });

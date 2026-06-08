@@ -6,6 +6,30 @@ import { getGoalFeedback } from '../services/ai';
 import { useAuth } from './useAuth';
 import { XP_VALUES, calculateGoalQualityBonus } from './useGamification';
 
+// Fetch active goals whose deadline has passed
+export function useExpiredGoals() {
+  const { user } = useAuth();
+  const today = new Date().toISOString().split('T')[0];
+
+  return useQuery({
+    queryKey: ['expired-goals', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('goals')
+        .select('id, title, deadline, skill_id')
+        .eq('athlete_id', user!.id)
+        .eq('status', 'active')
+        .not('deadline', 'is', null)
+        .lt('deadline', today)
+        .order('deadline', { ascending: true });
+
+      if (error) throw error;
+      return (data ?? []) as Pick<Goal, 'id' | 'title' | 'deadline' | 'skill_id'>[];
+    },
+    enabled: !!user?.id,
+  });
+}
+
 export function useGoals(athleteId?: string, status?: GoalStatus) {
   const { user } = useAuth();
   const id = athleteId ?? user?.id;

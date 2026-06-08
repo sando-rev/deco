@@ -4,14 +4,14 @@ export function Methodology() {
       num: "01",
       title: "Bewustzijn",
       description:
-        "Weet waar je staat. Beoordeel jezelf op 8 vaardigheidsdimensies en zie je sterke punten en hiaten duidelijk.",
+        "Weet waar je staat. Kies vaardigheden die passen bij jouw positie en speelstijl — technisch, tactisch, fysiek en mentaal — en beoordeel jezelf eerlijk.",
       color: "bg-deco-primary/10 text-deco-primary",
     },
     {
       num: "02",
       title: "Intentie",
       description:
-        "Stel specifieke doelen voor de 2-3 gebieden die er het meest toe doen. AI-feedback zorgt ervoor dat je doelen uitvoerbaar zijn.",
+        "Stel specifieke, meetbare en uitdagende doelen voor de gebieden die er het meest toe doen. AI-feedback maakt ze concreet en uitvoerbaar.",
       color: "bg-deco-accent/10 text-deco-accent",
     },
     {
@@ -23,9 +23,9 @@ export function Methodology() {
     },
     {
       num: "04",
-      title: "Groei",
+      title: "Reflecteren & Groeien",
       description:
-        "Reflecteer, volg bij, herhaal. Zie je vaardigheden evolueren over weken en maanden van intentionele ontwikkeling.",
+        "Zonder reflectie geen groei. Neem na elke sessie 2 minuten om te evalueren wat werkte en wat beter kan. Zo bouw je bewust aan je ontwikkeling.",
       color: "bg-green-50 text-green-600",
     },
   ];
@@ -63,11 +63,14 @@ export function Methodology() {
                 Het probleem dat elke coach kent
               </h3>
               <p className="text-sm text-red-800/80 leading-relaxed">
-                Een coach voert ontwikkelgesprekken met 15+ spelers. Elke
-                speler krijgt de opdracht zich te richten op 2-3 verbeterpunten. Binnen enkele weken
-                <span className="font-semibold"> vergeten beiden</span> wat er
-                besproken is. Trainingen gaan voorbij zonder intentie. Het
-                ontwikkelgesprek was voor niets.
+                Je voert ontwikkelgesprekken met 15+ spelers. Iedereen krijgt
+                2-3 aandachtspunten mee. Maar als coach kun je onmogelijk van
+                iedereen onthouden waar ze aan werken. En de spelers zelf?{" "}
+                <span className="font-semibold">
+                  Die zijn het na 1-2 weken alweer vergeten.
+                </span>{" "}
+                Trainingen gaan voorbij zonder focus. Zonder reflectie.
+                Het ontwikkelgesprek was voor niets — en groei blijft uit.
               </p>
             </div>
           </div>

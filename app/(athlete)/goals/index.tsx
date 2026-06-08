@@ -80,7 +80,6 @@ export default function GoalsScreen() {
           renderItem={({ item }) => (
             <GoalCard
               goal={item}
-              showAiFeedback
               skillDefinitions={skillDefs}
               coachFeedback={feedbackByGoal.get(item.id)}
               onPress={() => router.push(`/(athlete)/goals/${item.id}`)}

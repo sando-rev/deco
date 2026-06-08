@@ -8,7 +8,7 @@ interface InputProps extends TextInputProps {
   containerStyle?: ViewStyle;
 }
 
-export function Input({ label, error, containerStyle, style, ...props }: InputProps) {
+export function Input({ label, error, containerStyle, style, onFocus, onBlur, ...props }: InputProps) {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
@@ -22,8 +22,8 @@ export function Input({ label, error, containerStyle, style, ...props }: InputPr
           style,
         ]}
         placeholderTextColor={Colors.textTertiary}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onFocus={(e) => { setIsFocused(true); onFocus?.(e); }}
+        onBlur={(e) => { setIsFocused(false); onBlur?.(e); }}
         {...props}
       />
       {error && <Text style={styles.error}>{error}</Text>}
