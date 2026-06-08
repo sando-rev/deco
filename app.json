@@ -52,7 +52,7 @@
       "url": "https://u.expo.dev/1d4ac95d-3bd4-4fc4-aa17-2df95e766acc"
     },
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "fingerprint"
     },
     "experiments": {
       "typedRoutes": true
