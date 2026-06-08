@@ -4,15 +4,7 @@
     "appVersionSource": "local"
   },
   "build": {
-    "base": {
-      "android": {
-        "config": {
-          "googleServicesFile": "GOOGLE_SERVICES_JSON"
-        }
-      }
-    },
     "preview": {
-      "extends": "base",
       "android": {
         "buildType": "apk",
         "credentialsSource": "local"
@@ -21,7 +13,6 @@
       "channel": "preview"
     },
     "production": {
-      "extends": "base",
       "android": {
         "buildType": "app-bundle",
         "credentialsSource": "local"
