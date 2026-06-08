@@ -46,7 +46,6 @@ yarn-error.*
 
 # Secrets / credentials
 credentials.json
-google-services.json
 .env.prod
 .env.vercel
 
