@@ -40,8 +40,22 @@ yarn-error.*
 /ios
 /android
 
-# APK build artifacts
+# Build artifacts
 *.apk
+*.aab
+
+# Secrets / credentials
+credentials.json
+google-services.json
+.env.prod
+.env.vercel
+
+# Supabase temp
+supabase/.temp/
+
+# Test results
+test-results/
+landing/test-results/
 
 # Claude Code
 .claude/
