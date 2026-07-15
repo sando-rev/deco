@@ -35,6 +35,7 @@ import { Colors, Spacing, FontSize, BorderRadius } from '../constants/theme';
 import { Button } from './ui/Button';
 import { supabase } from '../services/supabase';
 import { useUpdateGoalStatus } from '../hooks/useGoals';
+import { useInsertGoalAchievedEvent } from '../hooks/useFeed';
 import { useLatestSkillScores, useSkillDefinitions } from '../hooks/useSkills';
 import { useCelebration } from './CelebrationContext';
 
@@ -69,6 +70,7 @@ export function GoalDeadlineModal({ goal, visible, onDismiss }: GoalDeadlineModa
   const queryClient = useQueryClient();
   const { celebrate } = useCelebration();
   const updateGoalStatus = useUpdateGoalStatus();
+  const insertGoalAchievedEvent = useInsertGoalAchievedEvent();
 
   const { data: skillDefinitions } = useSkillDefinitions();
   const { data: skillScores } = useLatestSkillScores();
@@ -115,6 +117,11 @@ export function GoalDeadlineModal({ goal, visible, onDismiss }: GoalDeadlineModa
         status: 'achieved',
         scoreImprovement: goal.skill_id ? selectedImprovement : undefined,
       });
+
+      // Post to team activity feed (non-critical, fire-and-forget)
+      insertGoalAchievedEvent
+        .mutateAsync({ goalId: goal.id, goalTitle: goal.title })
+        .catch((err) => console.warn('[GoalDeadlineModal] Failed to insert feed event:', err));
 
       celebrate({
         type: 'goal_achieved',

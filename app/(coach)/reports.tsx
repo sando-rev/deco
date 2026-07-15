@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { format, startOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { nl, enUS } from 'date-fns/locale';
@@ -48,10 +49,11 @@ interface PlayerRowProps {
   currentMessage?: string | null;
   onAction: (type: WeeklyActionType, message?: string) => void;
   hasUnresolvedOutlier?: boolean;
+  highlighted?: boolean;
   t: any;
 }
 
-function PlayerRow({ player, currentAction, currentMessage, onAction, hasUnresolvedOutlier, t }: PlayerRowProps) {
+function PlayerRow({ player, currentAction, currentMessage, onAction, hasUnresolvedOutlier, highlighted, t }: PlayerRowProps) {
   const [showRespondInput, setShowRespondInput] = useState(false);
   const [message, setMessage] = useState(currentMessage ?? '');
 
@@ -71,7 +73,7 @@ function PlayerRow({ player, currentAction, currentMessage, onAction, hasUnresol
   };
 
   return (
-    <Card style={styles.playerCard}>
+    <Card style={StyleSheet.flatten([styles.playerCard, highlighted && styles.playerCardHighlighted])}>
       <View style={styles.playerHeader}>
         <View style={styles.playerInfo}>
           <Text style={styles.playerName}>{player.name}</Text>
@@ -162,6 +164,7 @@ function PlayerRow({ player, currentAction, currentMessage, onAction, hasUnresol
 
 export default function WeeklyOverviewScreen() {
   const { t, i18n } = useTranslation();
+  const { highlightAthleteId } = useLocalSearchParams<{ highlightAthleteId?: string }>();
   const { activeTeam: team } = useActiveTeam();
   const locale = i18n.language === 'nl' ? nl : enUS;
 
@@ -260,6 +263,7 @@ export default function WeeklyOverviewScreen() {
                 currentMessage={action?.message}
                 onAction={(type, msg) => handleAction(item.athleteId, type, msg)}
                 hasUnresolvedOutlier={item.hasUnresolvedOutlier}
+                highlighted={item.athleteId === highlightAthleteId}
                 t={t}
               />
             );
@@ -328,6 +332,11 @@ const styles = StyleSheet.create({
   playerCard: {
     marginBottom: Spacing.md,
     padding: Spacing.md,
+  },
+  playerCardHighlighted: {
+    borderWidth: 1.5,
+    borderColor: '#F5A623',
+    backgroundColor: '#F5A623' + '10',
   },
   playerHeader: {
     flexDirection: 'row',

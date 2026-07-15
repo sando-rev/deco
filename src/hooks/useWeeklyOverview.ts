@@ -206,10 +206,30 @@ export function useSaveWeeklyAction() {
         );
 
       if (error) throw error;
+
+      // Resolve any open outlier notifications for this athlete.
+      // action_notification_sent is set to true deliberately: the weekly-action
+      // processor already notifies the athlete for good/respond, so this
+      // prevents a duplicate push from the outlier-action processor.
+      const { error: outlierError } = await supabase
+        .from('outlier_notifications')
+        .update({
+          coach_action: actionType,
+          coach_message: message ?? null,
+          action_notification_sent: true,
+        })
+        .eq('athlete_id', athleteId)
+        .eq('coach_id', user!.id)
+        .is('coach_action', null);
+
+      if (outlierError) throw outlierError;
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ['weekly-actions', variables.teamId, variables.weekStart, user?.id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['weekly-player-stats', variables.teamId, variables.weekStart],
       });
     },
   });

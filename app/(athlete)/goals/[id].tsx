@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useGoalWithComments, useUpdateGoalStatus } from '../../../src/hooks/useGoals';
 import { useSkillDefinitions, useLatestSkillScores } from '../../../src/hooks/useSkills';
 import { useMarkFeedbackSeen, useCheckAchievements, useGoalStats, useAwardXp, XP_VALUES, useSessionStreak } from '../../../src/hooks/useGamification';
+import { useInsertGoalAchievedEvent } from '../../../src/hooks/useFeed';
 import { GoalAnalysisCard } from '../../../src/components/GoalAnalysisCard';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../../src/constants/theme';
 import { Button } from '../../../src/components/ui/Button';
@@ -40,6 +41,7 @@ export default function GoalDetailScreen() {
   const { data: goalStats } = useGoalStats();
   const awardXp = useAwardXp();
   const { data: streak } = useSessionStreak();
+  const insertGoalAchievedEvent = useInsertGoalAchievedEvent();
 
   // Mark coach comments as seen when viewing this goal
   React.useEffect(() => {
@@ -88,6 +90,11 @@ export default function GoalDetailScreen() {
         status: 'achieved',
         scoreImprovement: selectedImprovement,
       });
+
+      // Post to team activity feed (non-critical, fire-and-forget)
+      insertGoalAchievedEvent
+        .mutateAsync({ goalId: goal.id, goalTitle: goal.title })
+        .catch((err) => console.warn('[Goals] Failed to insert feed event:', err));
 
       // Award XP for achieving goal
       const xpPoints = XP_VALUES.goal_achieved;

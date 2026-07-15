@@ -130,10 +130,10 @@ function WeeklySummaryContent({ event, t }: { event: FeedEvent; t: any }) {
       {meta?.biggestGrowth && (
         <Text style={styles.summaryLine}>{t('feed.biggestGrowth', { name: meta.biggestGrowth })}</Text>
       )}
-      {meta?.teamAverage !== undefined && (
+      {meta?.teamAverage != null && (
         <Text style={styles.summaryLine}>
           {t('feed.teamAverage', { score: meta.teamAverage.toFixed(1) })}
-          {meta?.avgChange !== undefined && (
+          {meta?.avgChange != null && (
             <Text style={{ color: meta.avgChange >= 0 ? '#2D9B6A' : '#E53E3E' }}>
               {' '}{meta.avgChange >= 0 ? '↑' : '↓'} {Math.abs(meta.avgChange).toFixed(1)}
             </Text>

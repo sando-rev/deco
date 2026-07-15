@@ -669,7 +669,7 @@ async function processCoachWeeklyReport(templates: TemplateMap): Promise<{ sent:
   // Find coaches with push tokens
   const { data: coaches, error } = await supabase
     .from("profiles")
-    .select("id, push_token, notifications_paused_until, language, coach_overview_day, coach_overview_time, coach_overview_notif_sent_date")
+    .select("id, full_name, push_token, notifications_paused_until, language, coach_overview_day, coach_overview_time, coach_overview_notif_sent_date")
     .eq("role", "coach")
     .not("push_token", "is", null);
 
@@ -717,6 +717,68 @@ async function processCoachWeeklyReport(templates: TemplateMap): Promise<{ sent:
       await supabase.from("profiles").update({ coach_overview_notif_sent_date: today }).eq("id", coach.id);
     } else {
       console.warn(`[coach-overview] push failed for coach ${coach.id}`);
+    }
+  }
+
+  // Publish coach_overview_published feed events, decoupled from push delivery:
+  // all coaches whose configured day/time window matches get feed events for their
+  // teams, regardless of push token, pause state, or push success.
+  const { data: feedCoaches, error: feedError } = await supabase
+    .from("profiles")
+    .select("id, full_name, coach_overview_day, coach_overview_time")
+    .eq("role", "coach");
+
+  if (feedError) {
+    console.error("[coach-overview] feed coaches query error:", feedError);
+    return { sent, skipped };
+  }
+
+  for (const coach of (feedCoaches ?? []) as any[]) {
+    // Same day/time-window logic as the push flow above
+    const overviewDay = coach.coach_overview_day ?? 5;
+    if (todayDow !== overviewDay) continue;
+
+    const overviewTime = coach.coach_overview_time ?? "18:00";
+    const [oh, om] = overviewTime.split(":").map(Number);
+    const targetMinute = oh * 60 + om;
+    if (currentMinuteOfDay < targetMinute - 10 || currentMinuteOfDay > targetMinute) continue;
+
+    // Publish a coach_overview_published feed event for each of the coach's teams
+    try {
+      const { data: coachTeams } = await supabase
+        .from("team_coaches")
+        .select("team_id")
+        .eq("coach_id", coach.id);
+
+      for (const ct of (coachTeams ?? []) as any[]) {
+        // Dedup per team per day (another coach of the same team may already have triggered)
+        const { data: existing } = await supabase
+          .from("feed_events")
+          .select("id")
+          .eq("team_id", ct.team_id)
+          .eq("event_type", "coach_overview_published")
+          .gte("created_at", `${today}T00:00:00`)
+          .limit(1);
+
+        if (existing && existing.length > 0) continue;
+
+        const { error: insertError } = await supabase.from("feed_events").insert({
+          team_id: ct.team_id,
+          event_type: "coach_overview_published",
+          metadata: {
+            coachName: coach.full_name ?? null,
+            weekStart: getMondayOfWeek(now).split("T")[0],
+          },
+        });
+
+        if (insertError) {
+          console.error(`[coach-overview] feed event insert failed for team ${ct.team_id}:`, insertError);
+        } else {
+          console.log(`[coach-overview] feed event created for team ${ct.team_id}`);
+        }
+      }
+    } catch (e) {
+      console.error(`[coach-overview] feed event publishing failed for coach ${coach.id}:`, e);
     }
   }
 
@@ -1681,7 +1743,11 @@ async function processAutoFeedEvents(): Promise<{ created: number }> {
           const dates = (refs as any[]).map((r) => new Date(r.created_at));
           const gap1 = (dates[0].getTime() - dates[1].getTime()) / (24 * 60 * 60_000);
           const gap2 = (dates[1].getTime() - dates[2].getTime()) / (24 * 60 * 60_000);
-          if (gap1 <= 2 && gap2 <= 2) {
+          // Only fire when the streak was just completed (newest reflection within 24h)
+          const justCompleted = Date.now() - dates[0].getTime() <= 24 * 60 * 60_000;
+          // Require 3 distinct calendar days (3 same-day reflections are not a streak)
+          const distinctDays = new Set(dates.map((d) => d.toISOString().split("T")[0]));
+          if (gap1 <= 2 && gap2 <= 2 && justCompleted && distinctDays.size === 3) {
             await supabase.from("feed_events").insert({
               team_id: team.id,
               athlete_id: athleteId,
@@ -1706,11 +1772,14 @@ async function processAutoFeedEvents(): Promise<{ created: number }> {
         if ((thisWeekCount ?? 0) >= 3) {
           // Check if this is more than any previous week
           // Count reflections per week historically using simple approach
+          // (history is bounded to the most recent 1000 reflections)
           const { data: allRefs } = await supabase
             .from("reflections")
             .select("created_at")
             .eq("athlete_id", athleteId)
-            .lt("created_at", mondayStr);
+            .lt("created_at", mondayStr)
+            .order("created_at", { ascending: false })
+            .limit(1000);
 
           const weekCounts = new Map<string, number>();
           for (const r of (allRefs ?? []) as any[]) {
@@ -1719,7 +1788,8 @@ async function processAutoFeedEvents(): Promise<{ created: number }> {
           }
 
           const maxPrev = Math.max(0, ...weekCounts.values());
-          if ((thisWeekCount ?? 0) > maxPrev) {
+          // Require at least one previous week of history (no record on the very first week)
+          if (weekCounts.size > 0 && (thisWeekCount ?? 0) > maxPrev) {
             await supabase.from("feed_events").insert({
               team_id: team.id,
               athlete_id: athleteId,
@@ -1818,6 +1888,8 @@ async function processReactionNotifications(): Promise<{ sent: number; skipped: 
     }
 
     if (owner.notifications_paused_until && new Date(owner.notifications_paused_until) > new Date()) {
+      // Drop (not queue): mark as sent so the reaction isn't reprocessed and delivered stale after the pause
+      await supabase.from("feed_reactions").update({ notification_sent: true }).eq("id", reaction.id);
       skipped++;
       continue;
     }
@@ -1906,25 +1978,29 @@ async function processWeeklyTeamSummary(): Promise<{ created: number; notified: 
       refIds.push(r.id);
     }
 
-    // Most active (most reflections)
+    // Get names + feed visibility
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, feed_visible")
+      .in("id", athleteIds);
+
+    const nameMap = new Map<string, string>();
+    const feedHiddenIds = new Set<string>();
+    for (const p of (profiles ?? []) as any[]) {
+      nameMap.set(p.id, (p.full_name ?? "Speler").split(" ")[0]);
+      if (p.feed_visible === false) feedHiddenIds.add(p.id);
+    }
+
+    // Most active (most reflections) — athletes who opted out of the feed are never named,
+    // but still count in playersReflected/teamAverage aggregates
     let mostActiveId = "";
     let mostActiveCount = 0;
     for (const [aid, count] of refCountMap) {
+      if (feedHiddenIds.has(aid)) continue;
       if (count > mostActiveCount) {
         mostActiveId = aid;
         mostActiveCount = count;
       }
-    }
-
-    // Get names
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", athleteIds);
-
-    const nameMap = new Map<string, string>();
-    for (const p of (profiles ?? []) as any[]) {
-      nameMap.set(p.id, (p.full_name ?? "Speler").split(" ")[0]);
     }
 
     // This week's avg scores
@@ -2018,6 +2094,7 @@ async function processWeeklyTeamSummary(): Promise<{ created: number; notified: 
       }
 
       for (const [aid, thisAvg] of athleteAvgs) {
+        if (feedHiddenIds.has(aid)) continue;
         const lastRatings = lastAthleteRatings.get(aid);
         if (!lastRatings || lastRatings.length === 0) continue;
         const lastAvg = lastRatings.reduce((a, b) => a + b, 0) / lastRatings.length;
@@ -2043,11 +2120,12 @@ async function processWeeklyTeamSummary(): Promise<{ created: number; notified: 
     const metadata: Record<string, any> = {
       mostActive: mostActiveId ? nameMap.get(mostActiveId) : null,
       biggestGrowth: biggestGrowthId && biggestGrowthDelta > 0 ? nameMap.get(biggestGrowthId) : null,
-      teamAverage,
-      avgChange,
       playersReflected,
       totalPlayers,
     };
+    // Omit rating keys when there are no goal ratings this week (client renders .toFixed on them)
+    if (teamAverage !== null) metadata.teamAverage = teamAverage;
+    if (avgChange !== undefined) metadata.avgChange = avgChange;
 
     await supabase.from("feed_events").insert({
       team_id: team.id,

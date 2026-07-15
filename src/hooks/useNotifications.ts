@@ -123,6 +123,11 @@ function handleNotificationNavigation(data: Record<string, unknown>) {
       router.push('/(athlete)/development/reflect' as any);
     } else if (data?.type === 'coach_report') {
       router.push('/(coach)/reports' as any);
+    } else if (data?.type === 'outlier') {
+      router.push({
+        pathname: '/(coach)/reports' as any,
+        params: data?.athleteId ? { highlightAthleteId: data.athleteId as string } : {},
+      });
     }
   }, 1000);
 }

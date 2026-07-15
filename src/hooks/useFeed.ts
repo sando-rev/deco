@@ -149,10 +149,11 @@ export function useToggleReaction() {
           // Same emoji → remove reaction
           await supabase.from('feed_reactions').delete().eq('id', (existing as any).id);
         } else {
-          // Different emoji → update
+          // Different emoji → update the emoji only; keep notification_sent
+          // untouched so the owner isn't re-notified for every emoji change
           await supabase
             .from('feed_reactions')
-            .update({ emoji, notification_sent: false })
+            .update({ emoji })
             .eq('id', (existing as any).id);
         }
       } else {
@@ -218,6 +219,68 @@ export function usePinEvent() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['feed-events', variables.teamId] });
+    },
+  });
+}
+
+// ─── Goal achieved feed event ───────────────────────────────────────────────
+// Inserts a 'goal_achieved' event into each of the athlete's team feeds.
+// Deduped per goal via metadata.goalId. Non-critical side effect: callers
+// should fire-and-forget and catch errors.
+
+export function useInsertGoalAchievedEvent() {
+  const { user, profile } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ goalId, goalTitle }: { goalId: string; goalTitle: string }) => {
+      // Respect the athlete's feed visibility preference (defaults to true
+      // when the column is null/undefined — only skip on explicit false)
+      if ((profile as any)?.feed_visible === false) return [];
+
+      // Resolve the athlete's team memberships
+      const { data: memberships, error: mError } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('athlete_id', user!.id);
+
+      if (mError) throw mError;
+
+      const teamIds = ((memberships ?? []) as any[]).map((m) => m.team_id);
+      if (teamIds.length === 0) return []; // No team → skip silently
+
+      // Dedup: skip teams that already have an event for this goal
+      const { data: existing, error: eError } = await supabase
+        .from('feed_events')
+        .select('team_id')
+        .eq('athlete_id', user!.id)
+        .eq('event_type', 'goal_achieved')
+        .eq('metadata->>goalId', goalId);
+
+      if (eError) throw eError;
+
+      const existingTeamIds = new Set(((existing ?? []) as any[]).map((e) => e.team_id));
+      const newTeamIds = teamIds.filter((id) => !existingTeamIds.has(id));
+      if (newTeamIds.length === 0) return [];
+
+      const firstName = profile?.full_name?.split(' ')[0] ?? 'Speler';
+
+      const { error } = await supabase.from('feed_events').insert(
+        newTeamIds.map((teamId) => ({
+          team_id: teamId,
+          athlete_id: user!.id,
+          event_type: 'goal_achieved',
+          metadata: { name: firstName, goalId, goalTitle },
+        }))
+      );
+
+      if (error) throw error;
+      return newTeamIds;
+    },
+    onSuccess: (teamIds) => {
+      for (const teamId of teamIds) {
+        queryClient.invalidateQueries({ queryKey: ['feed-events', teamId] });
+      }
     },
   });
 }
